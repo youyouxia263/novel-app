@@ -1,0 +1,5 @@
+{
+  "name": "小说生成器",
+  "description": "An AI-powered novel generation assistant specializing in suspense and romance genres. Generates outlines and writes chapters with customizable styling.",
+  "requestFramePermissions": []
+}
