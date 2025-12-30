@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { AppearanceSettings, Chapter, NovelSettings, GrammarIssue } from '../types';
-import { Type, AlignLeft, AlignJustify, Moon, Sun, Monitor, ArrowUpDown, Home, ChevronRight, Edit3, Save, X, Sparkles, Loader2, AlertTriangle, FileText, BookOpen, Copy, Check, SpellCheck, PenLine } from 'lucide-react';
+import { Type, AlignLeft, AlignJustify, Moon, Sun, Monitor, ArrowUpDown, Home, ChevronRight, Edit3, Save, X, Sparkles, Loader2, AlertTriangle, FileText, BookOpen, Copy, Check, SpellCheck, PenLine, FileCode } from 'lucide-react';
 import { continueWriting, checkGrammar, autoCorrectGrammar } from '../services/geminiService';
 import GrammarReport from './GrammarReport';
 
@@ -26,7 +26,9 @@ const Reader: React.FC<ReaderProps> = ({
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState('');
   const [isAiWriting, setIsAiWriting] = useState(false);
+  const [streamingContent, setStreamingContent] = useState(''); // Buffer for AI text
   const [copySuccess, setCopySuccess] = useState(false);
+  const [mdCopySuccess, setMdCopySuccess] = useState(false);
   
   // Grammar Check State
   const [isCheckingGrammar, setIsCheckingGrammar] = useState(false);
@@ -35,6 +37,7 @@ const Reader: React.FC<ReaderProps> = ({
   const [isFixingGrammar, setIsFixingGrammar] = useState(false);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const contentEndRef = useRef<HTMLDivElement>(null);
 
   // Sync edit content when chapter changes or when entering edit mode
   useEffect(() => {
@@ -42,8 +45,25 @@ const Reader: React.FC<ReaderProps> = ({
         setEditContent(chapter.content || '');
         // If chapter changes, exit edit mode
         setIsEditing(false);
+        setStreamingContent('');
     }
   }, [chapter?.id, chapter?.content]);
+
+  // Auto-scroll to bottom when AI is writing (streaming) or editing
+  useEffect(() => {
+    if (isAiWriting) {
+        requestAnimationFrame(() => {
+             // If in read mode (likely), scroll the div
+             if (contentEndRef.current) {
+                 contentEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+             }
+             // If in edit mode (fallback), scroll textarea
+            if (textareaRef.current) {
+                textareaRef.current.scrollTop = textareaRef.current.scrollHeight;
+            }
+        });
+    }
+  }, [streamingContent, editContent, isAiWriting]);
 
   const handleStartEdit = () => {
     if (!chapter) return;
@@ -64,35 +84,42 @@ const Reader: React.FC<ReaderProps> = ({
 
   const handleAiContinue = async () => {
     if (!chapter) return;
+    
+    // 1. Prepare context. Use current edit content if available, otherwise chapter content.
+    let baseContent = isEditing ? editContent : (chapter.content || '');
+    if (baseContent && !baseContent.endsWith('\n')) {
+        baseContent += '\n';
+    }
+
+    // 2. Switch to view mode to show the fancy streaming styles
+    // If we were editing, update the chapter content first so the view mode isn't stale
+    if (isEditing) {
+        onUpdateContent(chapter.id, baseContent);
+    }
+    setIsEditing(false);
     setIsAiWriting(true);
+    setStreamingContent(''); 
+
     try {
-        const stream = continueWriting(editContent, settings, chapter.title);
-        let newContent = editContent;
-        // Add a newline if needed
-        if (newContent && !newContent.endsWith('\n')) {
-            newContent += '\n';
-        }
+        const stream = continueWriting(baseContent, settings, chapter.title);
+        let accumulated = '';
         
         for await (const chunk of stream) {
-            newContent += chunk;
-            setEditContent(newContent);
-            // Scroll to bottom of textarea
-            if (textareaRef.current) {
-                textareaRef.current.scrollTop = textareaRef.current.scrollHeight;
-            }
+            accumulated += chunk;
+            setStreamingContent(accumulated);
         }
+
+        // 3. Finalize
+        const finalContent = baseContent + accumulated;
+        setEditContent(finalContent);
+        onUpdateContent(chapter.id, finalContent);
+
     } catch (e) {
         console.error("AI writing failed", e);
         alert("AI assistant encountered an error.");
     } finally {
+        setStreamingContent('');
         setIsAiWriting(false);
-        // Focus back on textarea after a short delay
-        setTimeout(() => {
-            if (textareaRef.current) {
-                textareaRef.current.focus();
-                textareaRef.current.scrollTop = textareaRef.current.scrollHeight;
-            }
-        }, 100);
     }
   };
 
@@ -106,6 +133,22 @@ const Reader: React.FC<ReaderProps> = ({
         setTimeout(() => setCopySuccess(false), 2000);
     } catch (err) {
         console.error('Failed to copy', err);
+    }
+  };
+
+  const handleCopyMarkdown = async () => {
+    if (!chapter?.content && !editContent) return;
+    const content = isEditing ? editContent : chapter?.content || '';
+    
+    // Construct a nice Markdown format
+    const markdown = `# ${chapter?.title}\n\n${content}`;
+    
+    try {
+        await navigator.clipboard.writeText(markdown);
+        setMdCopySuccess(true);
+        setTimeout(() => setMdCopySuccess(false), 2000);
+    } catch (err) {
+        console.error('Failed to copy markdown', err);
     }
   };
 
@@ -199,19 +242,18 @@ const Reader: React.FC<ReaderProps> = ({
            {/* Breadcrumb */}
            <button 
               onClick={onBack}
-              className={`flex items-center hover:opacity-100 transition-colors flex-shrink-0 ${
+              className={`flex items-center hover:opacity-100 transition-colors flex-shrink-0 group ${
                 appearance.theme === 'light' ? 'hover:text-indigo-600 opacity-60' : 'opacity-60 hover:opacity-100'
               }`}
               title="返回首页 (Back to Home)"
            >
               <Home size={16} />
+              <ChevronRight size={14} className="mx-2 opacity-30 flex-shrink-0" />
+              
+              <span className="text-sm font-medium opacity-70 truncate max-w-[80px] md:max-w-[200px] hover:underline cursor-pointer" title={settings.title}>
+                  {settings.title || "Untitled"}
+              </span>
            </button>
-           
-           <ChevronRight size={14} className="mx-2 opacity-30 flex-shrink-0" />
-           
-           <span className="text-sm font-medium opacity-70 truncate max-w-[80px] md:max-w-[200px]" title={settings.title}>
-              {settings.title || "Untitled"}
-           </span>
            
            <ChevronRight size={14} className="mx-2 opacity-30 flex-shrink-0" />
            
@@ -268,13 +310,30 @@ const Reader: React.FC<ReaderProps> = ({
                 {chapter.content && !chapter.isGenerating && (
                     <>
                     <div className="h-4 w-px bg-current opacity-20 mx-2"></div>
+                    
+                    {/* Markdown Copy */}
+                    <button
+                        onClick={handleCopyMarkdown}
+                        className="p-1.5 rounded-md hover:bg-black/5 text-gray-500 hover:text-indigo-600 transition-colors relative group"
+                        title="Copy as Markdown"
+                    >
+                        {mdCopySuccess ? <Check size={16} className="text-green-600" /> : <FileCode size={16} />}
+                        <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-black/80 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                            Copy Markdown
+                        </span>
+                    </button>
+
                     <button
                         onClick={handleCopy}
-                        className="p-1.5 rounded-md hover:bg-black/5 text-gray-500 hover:text-indigo-600 transition-colors"
-                        title="Copy to Clipboard"
+                        className="p-1.5 rounded-md hover:bg-black/5 text-gray-500 hover:text-indigo-600 transition-colors relative group"
+                        title="Copy Text"
                     >
                         {copySuccess ? <Check size={16} className="text-green-600" /> : <Copy size={16} />}
+                         <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-black/80 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                            Copy Text
+                        </span>
                     </button>
+
                      <button
                         onClick={handleGrammarCheck}
                         disabled={isCheckingGrammar}
@@ -285,10 +344,7 @@ const Reader: React.FC<ReaderProps> = ({
                     </button>
 
                     <button 
-                        onClick={() => {
-                            handleStartEdit();
-                            handleAiContinue();
-                        }}
+                        onClick={handleAiContinue}
                         disabled={isAiWriting}
                         className="ml-2 flex items-center space-x-1 bg-purple-50 text-purple-700 border border-purple-200 px-3 py-1.5 rounded-md text-xs font-medium hover:bg-purple-100 transition-colors shadow-sm"
                         title="AI 续写 (Continue Writing)"
@@ -339,130 +395,60 @@ const Reader: React.FC<ReaderProps> = ({
         </div>
       </div>
 
-      {/* Content Area */}
-      <div className="flex-1 overflow-y-auto relative scroll-smooth">
-        <div className={`min-h-full max-w-3xl mx-auto py-12 px-8 md:px-12 shadow-sm transition-colors duration-300 ${getThemeClasses()}`}>
-            
-            <div className="mb-6">
-                <h1 className={`text-3xl md:text-4xl font-bold mb-2 ${appearance.fontFamily === 'font-sans' ? 'tracking-tight' : ''}`}>
-                {chapter.title}
-                </h1>
-                <div className="flex items-center space-x-4">
-                    <div className="h-1 w-20 bg-indigo-500 rounded-full"></div>
-                    {wordCount > 0 && (
-                        <div className="flex items-center text-xs opacity-50 space-x-1">
-                            <FileText size={12} />
-                            <span>{wordCount} 字 (Words)</span>
-                        </div>
-                    )}
+      {/* Editor / Viewer Content Area */}
+      <div className="flex-1 relative w-full h-full min-h-0">
+        {isEditing ? (
+           <textarea
+             ref={textareaRef}
+             value={editContent}
+             onChange={(e) => setEditContent(e.target.value)}
+             className={`absolute inset-0 w-full h-full p-8 resize-none outline-none leading-loose ${getThemeClasses()} ${appearance.fontFamily} ${appearance.fontSize}`}
+             placeholder="Start writing..."
+           />
+        ) : (
+           <div 
+             className={`absolute inset-0 w-full h-full overflow-y-auto p-8 prose max-w-none ${getThemeClasses()} ${appearance.fontFamily} ${appearance.fontSize} ${appearance.textAlign} ${appearance.lineHeight}`}
+           >
+             {chapter.content || chapter.isGenerating || streamingContent ? (
+                <div className="whitespace-pre-wrap max-w-3xl mx-auto pb-20">
+                   <h1 className="text-3xl font-bold mb-8 text-center">{chapter.title}</h1>
+                   {/* Main Content */}
+                   <span>{chapter.content}</span>
+                   
+                   {/* Streaming Content (Visual Indicator) */}
+                   {streamingContent && (
+                        <span className={`inline relative ${
+                            appearance.theme === 'dark' ? 'text-indigo-300 bg-indigo-900/30' : 'text-indigo-700 bg-indigo-50'
+                        } transition-colors duration-200`}>
+                            {streamingContent}
+                            <span className="inline-block w-2 h-4 ml-1 align-middle bg-indigo-500 animate-pulse rounded-sm"></span>
+                        </span>
+                   )}
+                   
+                   {/* Fallback cursor if just waiting */}
+                   {(chapter.isGenerating || isAiWriting) && !streamingContent && (
+                      <span className="inline-block w-2 h-4 ml-1 bg-current animate-pulse">|</span>
+                   )}
+                   <div ref={contentEndRef} />
                 </div>
-            </div>
-
-            {/* Consistency Warning */}
-            {chapter.consistencyAnalysis && chapter.consistencyAnalysis !== "Consistent" && (
-                <div className="mb-8 p-4 bg-orange-50 border-l-4 border-orange-400 rounded-r-lg">
-                    <div className="flex items-start">
-                        <AlertTriangle className="h-5 w-5 text-orange-500 mr-2 mt-0.5" />
-                        <div>
-                            <h4 className="text-sm font-bold text-orange-800">人物一致性校验警告 (Consistency Warning)</h4>
-                            <div className="text-sm text-orange-700 mt-1 whitespace-pre-wrap">
-                                {chapter.consistencyAnalysis}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Chapter Outline/Summary Display - Shows only when content exists or in edit mode */}
-            {chapter.summary && (chapter.content || isEditing) && (
-               <div className={`mb-10 p-6 rounded-xl border transition-colors ${
-                   appearance.theme === 'dark' ? 'bg-white/5 border-white/10 text-gray-400' : 
-                   appearance.theme === 'sepia' ? 'bg-[#e6dcc8] border-[#d3c4b1] text-[#5b4636]' : 
-                   'bg-gray-50 border-gray-100 text-gray-600'
-               }`}>
-                   <div className="flex items-center space-x-2 mb-3 opacity-70">
-                       <BookOpen size={14} className="opacity-70" />
-                       <span className="text-xs font-bold uppercase tracking-widest">本章大纲 (Outline)</span>
-                       <div className="h-px flex-1 bg-current opacity-20"></div>
+             ) : (
+                <div className="h-full flex flex-col items-center justify-center text-gray-400 space-y-4">
+                   <div className="p-4 rounded-full bg-gray-100/50">
+                      <Sparkles size={32} className="opacity-50" />
                    </div>
-                   <p className="text-sm leading-relaxed font-serif italic opacity-90">
-                       {chapter.summary}
-                   </p>
-               </div>
-            )}
-
-            {isEditing ? (
-                 <div className="w-full h-[60vh] md:h-[70vh] relative group">
-                    <textarea 
-                        ref={textareaRef}
-                        value={editContent}
-                        onChange={(e) => setEditContent(e.target.value)}
-                        readOnly={isAiWriting}
-                        className={`w-full h-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none resize-none bg-transparent ${
-                            appearance.theme === 'dark' ? 'text-gray-300 border-gray-700' : 'text-gray-800'
-                        } font-mono text-base leading-relaxed transition-opacity ${isAiWriting ? 'opacity-75 cursor-wait' : ''}`}
-                        placeholder="Start typing or use AI to generate..."
-                    />
-                    
-                    {/* Visual Feedback Overlay */}
-                    {isAiWriting && (
-                        <div className="absolute bottom-8 right-8 flex items-center space-x-3 bg-white/95 border border-indigo-100 text-indigo-700 px-5 py-3 rounded-xl shadow-xl backdrop-blur-sm animate-in fade-in slide-in-from-bottom-4 duration-300 z-10">
-                             <div className="flex space-x-1.5 items-center">
-                                <div className="w-2 h-2 bg-indigo-500 rounded-full animate-[bounce_1s_infinite_0ms]"></div>
-                                <div className="w-2 h-2 bg-indigo-500 rounded-full animate-[bounce_1s_infinite_200ms]"></div>
-                                <div className="w-2 h-2 bg-indigo-500 rounded-full animate-[bounce_1s_infinite_400ms]"></div>
-                             </div>
-                             <div className="flex flex-col">
-                                <span className="text-sm font-bold">AI 正在创作中...</span>
-                                <span className="text-[10px] text-gray-500 font-medium">Writing & Thinking</span>
-                             </div>
-                             <PenLine size={16} className="text-indigo-400 animate-pulse ml-1" />
-                        </div>
-                    )}
-                 </div>
-            ) : chapter.content ? (
-              <div className={`
-                prose max-w-none 
-                ${appearance.fontFamily} 
-                ${appearance.fontSize} 
-                ${appearance.lineHeight} 
-                ${appearance.textAlign}
-                ${appearance.theme === 'dark' ? 'prose-invert' : ''}
-                whitespace-pre-wrap
-              `}>
-                {chapter.content}
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-20 space-y-6 opacity-60">
-                <div className="text-center max-w-md space-y-2">
-                  <h3 className="font-serif text-xl italic">本章摘要</h3>
-                  <p className="text-sm leading-relaxed">{chapter.summary}</p>
+                   <p>本章暂无内容 (No content)</p>
+                   <button 
+                      onClick={onGenerate}
+                      className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                   >
+                      生成内容 (Generate)
+                   </button>
                 </div>
-                
-                {chapter.isGenerating ? (
-                  <div className="flex flex-col items-center space-y-3 animate-pulse">
-                     <div className="h-2 w-32 bg-indigo-400 rounded"></div>
-                     <div className="h-2 w-48 bg-indigo-400 rounded"></div>
-                     <div className="h-2 w-40 bg-indigo-400 rounded"></div>
-                     <span className="text-sm font-medium text-indigo-500 mt-2">正在撰写章节...</span>
-                  </div>
-                ) : (
-                  <button 
-                    onClick={onGenerate}
-                    className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full shadow-md transition-all transform hover:scale-105 active:scale-95 font-medium flex items-center space-x-2"
-                  >
-                    <Type size={16} />
-                    <span>生成本章内容</span>
-                  </button>
-                )}
-              </div>
-            )}
-
-            {/* Bottom spacer */}
-            <div className="h-20"></div>
-        </div>
+             )}
+           </div>
+        )}
       </div>
-      
+
       {/* Grammar Modal */}
       <GrammarReport 
         isOpen={showGrammarReport}

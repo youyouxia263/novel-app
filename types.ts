@@ -9,7 +9,8 @@ export enum Genre {
   TimeTravel = 'TimeTravel', // 穿越
   Rebirth = 'Rebirth',       // 重生
   Urban = 'Urban',           // 都市
-  Wuxia = 'Wuxia'            // 武侠/仙侠
+  Wuxia = 'Wuxia',           // 武侠/仙侠
+  System = 'System'          // 系统
 }
 
 export type Language = 'zh' | 'en';
@@ -24,16 +25,17 @@ export type NarrativePerspective = 'First Person' | 'Third Person Limited' | 'Th
 export interface NovelSettings {
   title: string;
   premise: string;
-  genre: Genre;
+  genre: Genre[]; // Changed to array
   novelType: NovelType;
   targetWordCount: number;
   chapterCount: number;
   language: Language;
+  worldSetting?: string; 
   // Model Configuration
   provider: ModelProvider;
-  baseUrl?: string; // For custom providers
-  apiKey?: string; // Optional for Gemini (uses env), required for others
-  modelName?: string; // e.g., 'qwen-plus', 'ep-2024...'
+  baseUrl?: string; 
+  apiKey?: string; 
+  modelName?: string; 
   
   // Style Configuration
   writingTone: WritingTone;
@@ -63,7 +65,7 @@ export interface Chapter {
   content: string;
   isGenerating: boolean;
   isDone: boolean;
-  consistencyAnalysis?: string; // Result of the consistency check
+  consistencyAnalysis?: string;
 }
 
 export interface GrammarIssue {

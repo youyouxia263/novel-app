@@ -11,14 +11,15 @@ import { Layout, Menu, ChevronRight, CheckCircle2, Circle, Save, Download, FileT
 const DEFAULT_SETTINGS: NovelSettings = {
   title: '',
   premise: '',
-  genre: Genre.Suspense, // Default requirement
+  genre: [Genre.Suspense, Genre.Romance], // Default to multiple genres example
   novelType: 'long',
-  targetWordCount: 10000, // Updated default requirement
+  targetWordCount: 10000, 
   chapterCount: 5,
-  language: 'zh', // Default to Chinese
+  language: 'zh', 
   provider: 'gemini',
   apiKey: '',
   modelName: '',
+  worldSetting: '', 
   // Default Style Settings
   writingTone: 'Neutral',
   writingStyle: 'Moderate',
@@ -55,12 +56,22 @@ const App: React.FC = () => {
     consistencyReport: null
   });
 
+  // Ref to track latest settings for async operations
+  const settingsRef = useRef(state.settings);
+
+  useEffect(() => {
+    settingsRef.current = state.settings;
+  }, [state.settings]);
+
   const [appearance, setAppearance] = useState<AppearanceSettings>(DEFAULT_APPEARANCE);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [showCharacterModal, setShowCharacterModal] = useState(false);
   const [showConsistencyReport, setShowConsistencyReport] = useState(false);
   const [isCheckingConsistency, setIsCheckingConsistency] = useState(false);
+
+  // Abort Controller for stopping generation (Outline/Characters)
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // Calculate stats
   const totalWordCount = state.chapters.reduce((acc, c) => acc + getWordCount(c.content || ''), 0);
@@ -82,6 +93,12 @@ const App: React.FC = () => {
       }
     }
     
+    // Stop any ongoing outline generation if we go back
+    if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
+    }
+
     setState({
       settings: DEFAULT_SETTINGS,
       chapters: [],
@@ -102,12 +119,20 @@ const App: React.FC = () => {
   };
 
   const generateOutlineAndCharacters = async () => {
+    // Create new controller
+    if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+    }
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     setState(prev => ({ ...prev, status: 'generating_outline' }));
+    
     try {
-      // Parallel generation for speed
+      // Parallel generation for speed, passing signal
       const [outline, characters] = await Promise.all([
-         GeminiService.generateOutline(state.settings),
-         GeminiService.generateCharacters(state.settings)
+         GeminiService.generateOutline(settingsRef.current, controller.signal),
+         GeminiService.generateCharacters(settingsRef.current, controller.signal)
       ]);
       
       const newChapters: Chapter[] = outline.map(c => ({
@@ -124,11 +149,28 @@ const App: React.FC = () => {
         status: 'ready',
         currentChapterId: newChapters[0]?.id || null
       }));
-    } catch (error) {
-      console.error("Generation failed", error);
-      alert("Failed to generate outline or characters. Please check your API key and network connection.");
-      setState(prev => ({ ...prev, status: 'idle' }));
+    } catch (error: any) {
+      if (error.name === 'AbortError' || error.message?.includes('Aborted')) {
+          console.log("Generation stopped by user.");
+          // Status reset handled by stop handler usually, but ensure consistency
+          setState(prev => ({ ...prev, status: 'idle' }));
+      } else {
+          console.error("Generation failed", error);
+          alert("Failed to generate outline or characters. Please check your API key and network connection.");
+          setState(prev => ({ ...prev, status: 'idle' }));
+      }
+    } finally {
+        abortControllerRef.current = null;
     }
+  };
+
+  const handleStopOutlineGeneration = () => {
+      if (abortControllerRef.current) {
+          abortControllerRef.current.abort();
+          abortControllerRef.current = null;
+      }
+      // Force status back to idle immediately
+      setState(prev => ({ ...prev, status: 'idle' }));
   };
 
   const selectChapter = (id: number) => {
@@ -149,11 +191,22 @@ const App: React.FC = () => {
     const chapter = state.chapters[chapterIndex];
     if (chapter.isDone || chapter.isGenerating) return;
 
-    // Build context from previous completed chapters
-    const previousContent = state.chapters
-      .filter(c => c.isDone && c.id < chapterId)
-      .map(c => c.content)
-      .join("\n\n");
+    // --- Build Context for Continuity ---
+    const previousChapters = state.chapters.filter(c => c.isDone && c.id < chapterId);
+    
+    // 1. Summaries of all previous chapters
+    const storySummaries = previousChapters
+        .map(c => `Chapter ${c.id}: ${c.summary}`)
+        .join("\n");
+
+    // 2. The ending of the immediately preceding chapter (for seamless transition)
+    let lastChapterEnding = "";
+    if (previousChapters.length > 0) {
+        const last = previousChapters[previousChapters.length - 1];
+        if (last.id === chapterId - 1) {
+             lastChapterEnding = (last.content || "").slice(-2000);
+        }
+    }
 
     // Update state to generating
     setState(prev => {
@@ -163,7 +216,12 @@ const App: React.FC = () => {
     });
 
     try {
-      const stream = GeminiService.generateChapterStream(state.settings, chapter, previousContent);
+      const stream = GeminiService.generateChapterStream(
+          settingsRef.current, // Use ref
+          chapter, 
+          storySummaries, 
+          lastChapterEnding
+      );
       
       let fullContent = '';
       
@@ -188,7 +246,7 @@ const App: React.FC = () => {
       try {
         const generatedSummary = await GeminiService.summarizeChapter(
           fullContent, 
-          state.settings
+          settingsRef.current // Use ref
         );
         if (generatedSummary) {
           finalSummary = generatedSummary;
@@ -236,15 +294,30 @@ const App: React.FC = () => {
         return;
     }
 
-    let cumulativeContext = "";
+    // Prepare context buffers
+    let cumulativeSummaries = "";
+    const alreadyDone = state.chapters.filter(c => c.isDone);
+    cumulativeSummaries = alreadyDone.map(c => `Chapter ${c.id}: ${c.summary}`).join("\n");
+    
+    // Initialize lastChapterEnding based on the last completed chapter
+    let lastChapterEnding = "";
+    if (alreadyDone.length > 0) {
+        const last = alreadyDone[alreadyDone.length - 1];
+        lastChapterEnding = (last.content || "").slice(-2000);
+    }
 
     for (let i = 0; i < state.chapters.length; i++) {
         const chapter = state.chapters[i];
 
-        // If chapter is already done, just add to context and skip generation
+        // If chapter is already done, update our running context and skip
         if (chapter.isDone) {
-            cumulativeContext += (chapter.content || "") + "\n\n";
-            continue;
+             // Update summaries
+             if (!cumulativeSummaries.includes(`Chapter ${chapter.id}:`)) {
+                 cumulativeSummaries += `\nChapter ${chapter.id}: ${chapter.summary}`;
+             }
+             // Update ending for continuity
+             lastChapterEnding = (chapter.content || "").slice(-2000);
+             continue;
         }
 
         // Add a delay between chapters to avoid rate limits (3 seconds)
@@ -261,7 +334,12 @@ const App: React.FC = () => {
 
         try {
             let fullContent = "";
-            const stream = GeminiService.generateChapterStream(state.settings, chapter, cumulativeContext);
+            const stream = GeminiService.generateChapterStream(
+                settingsRef.current, // Use ref
+                chapter, 
+                cumulativeSummaries,
+                lastChapterEnding
+            );
             
             for await (const chunk of stream) {
                 fullContent += chunk;
@@ -275,7 +353,7 @@ const App: React.FC = () => {
              // Summarize
             let summary = chapter.summary;
             try {
-                 const genSummary = await GeminiService.summarizeChapter(fullContent, state.settings);
+                 const genSummary = await GeminiService.summarizeChapter(fullContent, settingsRef.current); // Use ref
                  if (genSummary) summary = genSummary;
             } catch (e) { console.error(e) }
 
@@ -292,7 +370,9 @@ const App: React.FC = () => {
                 return { ...prev, chapters: nextChapters };
             });
 
-            cumulativeContext += fullContent + "\n\n";
+            // Update context for next iteration
+            cumulativeSummaries += `\nChapter ${chapter.id}: ${summary}`;
+            lastChapterEnding = fullContent.slice(-2000);
 
         } catch (error) {
             console.error("Auto generation failed at chapter " + chapter.id, error);
@@ -324,7 +404,8 @@ const App: React.FC = () => {
     // Reset UI first
     setState(prev => ({ ...prev, chapters: chaptersToRewrite, currentChapterId: chaptersToRewrite[0].id }));
     
-    let cumulativeContext = "";
+    let cumulativeSummaries = "";
+    let lastChapterEnding = "";
     
     // Loop
     for (let i = 0; i < chaptersToRewrite.length; i++) {
@@ -342,7 +423,13 @@ const App: React.FC = () => {
         // Generate
         let fullContent = "";
         try {
-            const stream = GeminiService.generateChapterStream(state.settings, chapterConfig, cumulativeContext);
+            const stream = GeminiService.generateChapterStream(
+                settingsRef.current, // Use ref
+                chapterConfig, 
+                cumulativeSummaries,
+                lastChapterEnding
+            );
+
             for await (const chunk of stream) {
                 fullContent += chunk;
                 setState(prev => {
@@ -353,7 +440,7 @@ const App: React.FC = () => {
             }
             
             // Summarize
-            const summary = await GeminiService.summarizeChapter(fullContent, state.settings);
+            const summary = await GeminiService.summarizeChapter(fullContent, settingsRef.current); // Use ref
             
             // Mark done
             setState(prev => {
@@ -368,7 +455,8 @@ const App: React.FC = () => {
                 return { ...prev, chapters: nextChapters };
             });
             
-            cumulativeContext += fullContent + "\n\n";
+            cumulativeSummaries += `\nChapter ${chapterConfig.id}: ${summary}`;
+            lastChapterEnding = fullContent.slice(-2000);
             
         } catch (e) {
             console.error(e);
@@ -396,7 +484,7 @@ const App: React.FC = () => {
         const chapter = state.chapters[i];
         if (!chapter.isDone || !chapter.content) continue;
 
-        const analysis = await GeminiService.checkConsistency(chapter.content, state.characters, state.settings);
+        const analysis = await GeminiService.checkConsistency(chapter.content, state.characters, settingsRef.current); // Use ref
         
         // Update chapter with analysis result
         setState(prev => {
@@ -429,7 +517,7 @@ const App: React.FC = () => {
             chapter.content,
             state.characters,
             chapter.consistencyAnalysis,
-            state.settings
+            settingsRef.current // Use ref
         );
 
         setState(prev => {
@@ -553,8 +641,8 @@ const App: React.FC = () => {
   // 1. Initial Setup View
   if (state.status === 'idle' || state.status === 'generating_outline') {
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col">
-        <header className="bg-white border-b border-gray-200 py-4 px-6 flex items-center justify-between">
+      <div className="h-full bg-gray-50 flex flex-col">
+        <header className="bg-white border-b border-gray-200 py-4 px-6 flex items-center justify-between shrink-0">
           <div className="flex items-center space-x-2">
             <Layout className="text-indigo-600 w-6 h-6" />
             <h1 className="text-xl font-serif font-bold text-gray-800">DreamWeaver Novelist</h1>
@@ -565,6 +653,7 @@ const App: React.FC = () => {
             settings={state.settings}
             onSettingsChange={handleSettingsChange}
             onSubmit={generateOutlineAndCharacters}
+            onStop={handleStopOutlineGeneration}
             isLoading={state.status === 'generating_outline'}
           />
         </main>

@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { NovelSettings, Genre, Language, ModelProvider, WritingTone, WritingStyle, NarrativePerspective, NovelType } from '../types';
-import { BookOpen, PenTool, Sparkles, Globe, Wand2, Loader2, Bot, Key, Server, Feather, Eye, Mic2, Link, ScrollText, BookCopy } from 'lucide-react';
-import { generatePremise } from '../services/geminiService';
+import { BookOpen, PenTool, Sparkles, Globe, Wand2, Loader2, Bot, Key, Server, Feather, Eye, Mic2, Link, ScrollText, BookCopy, Globe2, Dna, Check, Square } from 'lucide-react';
+import { generatePremise, generateWorldSetting, expandText } from '../services/geminiService';
 
 interface SettingsFormProps {
   settings: NovelSettings;
   onSettingsChange: (settings: NovelSettings) => void;
   onSubmit: () => void;
+  onStop?: () => void;
   isLoading: boolean;
 }
 
@@ -20,11 +21,16 @@ const GENRE_LABELS: Record<Genre, string> = {
   [Genre.TimeTravel]: '穿越 (Time Travel)',
   [Genre.Rebirth]: '重生 (Rebirth)',
   [Genre.Urban]: '都市 (Urban)',
-  [Genre.Wuxia]: '武侠/仙侠 (Wuxia/Xianxia)',
+  [Genre.Wuxia]: '武侠/仙侠 (Wuxia)',
+  [Genre.System]: '系统 (System)',
 };
 
-const SettingsForm: React.FC<SettingsFormProps> = ({ settings, onSettingsChange, onSubmit, isLoading }) => {
+const SettingsForm: React.FC<SettingsFormProps> = ({ settings, onSettingsChange, onSubmit, onStop, isLoading }) => {
   const [isGeneratingPremise, setIsGeneratingPremise] = useState(false);
+  const [isExpandingPremise, setIsExpandingPremise] = useState(false);
+  
+  const [isGeneratingWorld, setIsGeneratingWorld] = useState(false);
+  const [isExpandingWorld, setIsExpandingWorld] = useState(false);
   
   const handleChange = (field: keyof NovelSettings, value: any) => {
     onSettingsChange({ ...settings, [field]: value });
@@ -35,8 +41,8 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ settings, onSettingsChange,
         onSettingsChange({
             ...settings,
             novelType: 'short',
-            targetWordCount: 5000, // Reasonable length for a one-shot
-            chapterCount: 1 // Single chapter for short stories
+            targetWordCount: 5000, 
+            chapterCount: 1 
         });
     } else {
         onSettingsChange({
@@ -45,6 +51,15 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ settings, onSettingsChange,
             targetWordCount: 100000,
             chapterCount: 20
         });
+    }
+  };
+
+  const toggleGenre = (genre: Genre) => {
+    const currentGenres = settings.genre;
+    if (currentGenres.includes(genre)) {
+      handleChange('genre', currentGenres.filter(g => g !== genre));
+    } else {
+      handleChange('genre', [...currentGenres, genre]);
     }
   };
 
@@ -67,6 +82,58 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ settings, onSettingsChange,
         alert("无法生成概要，请检查配置。");
     } finally {
         setIsGeneratingPremise(false);
+    }
+  };
+
+  const handleAiExpandPremise = async () => {
+      if (!settings.premise) {
+          alert("请先输入一些内容以便 AI 进行扩写 (Please enter some text to expand)");
+          return;
+      }
+      setIsExpandingPremise(true);
+      try {
+          const result = await expandText(settings.premise, 'Story Premise', settings);
+          handleChange('premise', result);
+      } catch (error) {
+          console.error(error);
+          alert("扩写失败 (Expansion failed)");
+      } finally {
+          setIsExpandingPremise(false);
+      }
+  };
+
+  const handleAiGenerateWorld = async () => {
+    if (!settings.title && settings.genre.length === 0) {
+        alert("请先输入标题和选择类型 (Please enter a title and select at least one genre)");
+        return;
+    }
+    
+    setIsGeneratingWorld(true);
+    try {
+        const result = await generateWorldSetting(settings);
+        handleChange('worldSetting', result);
+    } catch (error) {
+        console.error(error);
+        alert("无法生成世界设定。");
+    } finally {
+        setIsGeneratingWorld(false);
+    }
+  };
+
+  const handleAiExpandWorld = async () => {
+    if (!settings.worldSetting) {
+        alert("请先输入一些内容以便 AI 进行扩写 (Please enter some text to expand)");
+        return;
+    }
+    setIsExpandingWorld(true);
+    try {
+        const result = await expandText(settings.worldSetting, 'World Setting', settings);
+        handleChange('worldSetting', result);
+    } catch (error) {
+        console.error(error);
+        alert("扩写失败 (Expansion failed)");
+    } finally {
+        setIsExpandingWorld(false);
     }
   };
 
@@ -140,7 +207,7 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ settings, onSettingsChange,
                     </div>
                  )}
 
-                 {/* Model Name - Visible for all, but with different placeholders */}
+                 {/* Model Name */}
                  <div className={settings.provider === 'gemini' ? "col-span-2" : "col-span-2 md:col-span-1"}>
                     <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
                         {settings.provider === 'volcano' ? 'Endpoint ID (接入点 ID)' : 'Model Name (模型名称)'}
@@ -160,8 +227,6 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ settings, onSettingsChange,
                         />
                         <Server size={14} className="absolute left-2.5 top-2.5 text-gray-400" />
                     </div>
-                    {settings.provider === 'volcano' && <p className="text-[10px] text-gray-400 mt-1">Volcano Console: "Endpoint ID"</p>}
-                    {settings.provider === 'gemini' && <p className="text-[10px] text-gray-400 mt-1">Leave empty to use recommended models (Flash for outline, Pro for writing).</p>}
                 </div>
              </div>
         </div>
@@ -209,46 +274,35 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ settings, onSettingsChange,
             value={settings.title}
             onChange={(e) => handleChange('title', e.target.value)}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
-            placeholder={settings.genre === Genre.TimeTravel ? "例如：回到1990当首富" : "例如：沉默的回声"}
+            placeholder={settings.genre.includes(Genre.TimeTravel) ? "例如：回到1990当首富" : "例如：沉默的回声"}
           />
         </div>
 
-        <div>
-          <div className="flex justify-between items-center mb-1">
-            <label className="block text-sm font-medium text-gray-700">故事梗概 / 核心创意 (Premise)</label>
-            <button
-                onClick={handleAiGeneratePremise}
-                disabled={isGeneratingPremise || isLoading}
-                className="text-xs flex items-center space-x-1 text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-2 py-1 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                title={settings.premise ? "Expand existing idea" : "Generate from title"}
-            >
-                {isGeneratingPremise ? <Loader2 className="w-3 h-3 animate-spin" /> : <Wand2 className="w-3 h-3" />}
-                <span>{settings.premise ? "AI 润色/扩充 (AI Refine)" : "AI 自动生成 (Auto Generate)"}</span>
-            </button>
-          </div>
-          <textarea
-            value={settings.premise}
-            onChange={(e) => handleChange('premise', e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors min-h-[120px]"
-            placeholder="简要描述你的故事内容，或点击上方 AI 按钮自动生成..."
-          />
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div className="grid grid-cols-1 gap-5">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">类型 (Genre)</label>
-            <div className="relative">
-              <select
-                value={settings.genre}
-                onChange={(e) => handleChange('genre', e.target.value as Genre)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none appearance-none bg-white"
-              >
-                {Object.values(Genre).map((g) => (
-                  <option key={g} value={g}>{GENRE_LABELS[g]}</option>
-                ))}
-              </select>
-              <Sparkles className="absolute right-3 top-2.5 w-4 h-4 text-gray-400 pointer-events-none" />
+            <label className="block text-sm font-medium text-gray-700 mb-2">类型 (Genres) - 可多选</label>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+              {Object.values(Genre).map((g) => {
+                const isSelected = settings.genre.includes(g);
+                return (
+                  <button
+                    key={g}
+                    onClick={() => toggleGenre(g)}
+                    className={`relative px-3 py-2 rounded-md text-xs font-medium border transition-all duration-200 flex items-center justify-center space-x-1 ${
+                      isSelected
+                        ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm'
+                        : 'bg-white border-gray-300 text-gray-600 hover:border-indigo-300 hover:bg-indigo-50'
+                    }`}
+                  >
+                    <span>{GENRE_LABELS[g].split(' ')[0]}</span>
+                    {isSelected && <Check size={12} className="ml-1" />}
+                  </button>
+                );
+              })}
             </div>
+            {settings.genre.length === 0 && (
+                <p className="text-[10px] text-red-500 mt-1">Please select at least one genre.</p>
+            )}
           </div>
 
           <div>
@@ -265,6 +319,80 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ settings, onSettingsChange,
                 <Globe className="absolute right-3 top-2.5 w-4 h-4 text-gray-400 pointer-events-none" />
              </div>
           </div>
+        </div>
+
+        {/* World/System Setting */}
+        <div className={`p-4 rounded-lg border space-y-3 transition-colors ${
+            settings.genre.some(g => [Genre.System, Genre.Fantasy, Genre.SciFi].includes(g)) 
+            ? 'bg-purple-50 border-purple-200' 
+            : 'bg-gray-50 border-gray-200'
+        }`}>
+            <div className="flex justify-between items-center">
+                 <div className="flex items-center space-x-2 text-sm font-medium text-gray-800">
+                    {settings.genre.includes(Genre.System) ? <Dna size={18} className="text-purple-600"/> : <Globe2 size={18} className="text-gray-600"/>}
+                    <span>{settings.genre.includes(Genre.System) ? "系统规则 (System Rules)" : "世界观设置 (World Setting)"}</span>
+                 </div>
+                 
+                 <div className="flex space-x-2">
+                     <button
+                        onClick={handleAiGenerateWorld}
+                        disabled={isGeneratingWorld || isExpandingWorld || !settings.title || settings.genre.length === 0}
+                        className="text-xs flex items-center space-x-1 text-purple-600 hover:text-purple-800 bg-white border border-purple-100 px-3 py-1 rounded-full transition-colors disabled:opacity-50"
+                     >
+                        {isGeneratingWorld ? <Loader2 className="w-3 h-3 animate-spin" /> : <Wand2 className="w-3 h-3" />}
+                        <span>生成 (Generate)</span>
+                     </button>
+                     <button
+                        onClick={handleAiExpandWorld}
+                        disabled={isGeneratingWorld || isExpandingWorld || !settings.worldSetting}
+                        className="text-xs flex items-center space-x-1 text-indigo-600 hover:text-indigo-800 bg-white border border-indigo-100 px-3 py-1 rounded-full transition-colors disabled:opacity-50"
+                        title="Expand existing text"
+                     >
+                        {isExpandingWorld ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                        <span>AI 扩写 (Expand)</span>
+                     </button>
+                 </div>
+            </div>
+            
+            <textarea
+                value={settings.worldSetting || ''}
+                onChange={(e) => handleChange('worldSetting', e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors min-h-[100px] text-sm"
+                placeholder={settings.genre.includes(Genre.System) 
+                    ? "定义系统的功能、任务机制、奖励规则等..." 
+                    : "定义世界背景、魔法/科技规则、特殊设定等..."
+                }
+            />
+        </div>
+
+        <div>
+          <div className="flex justify-between items-center mb-1">
+            <label className="block text-sm font-medium text-gray-700">故事梗概 / 核心创意 (Premise)</label>
+            <div className="flex space-x-2">
+                 <button
+                    onClick={handleAiGeneratePremise}
+                    disabled={isGeneratingPremise || isExpandingPremise || isLoading}
+                    className="text-xs flex items-center space-x-1 text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-2 py-1 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    {isGeneratingPremise ? <Loader2 className="w-3 h-3 animate-spin" /> : <Wand2 className="w-3 h-3" />}
+                    <span>生成 (Generate)</span>
+                </button>
+                <button
+                    onClick={handleAiExpandPremise}
+                    disabled={isGeneratingPremise || isExpandingPremise || !settings.premise}
+                    className="text-xs flex items-center space-x-1 text-purple-600 hover:text-purple-800 bg-purple-50 hover:bg-purple-100 px-2 py-1 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    {isExpandingPremise ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                    <span>AI 扩写 (Expand)</span>
+                </button>
+            </div>
+          </div>
+          <textarea
+            value={settings.premise}
+            onChange={(e) => handleChange('premise', e.target.value)}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors min-h-[120px]"
+            placeholder="简要描述你的故事内容，或点击上方 AI 按钮自动生成..."
+          />
         </div>
 
         {/* Writing Style Section */}
@@ -363,27 +491,37 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ settings, onSettingsChange,
         </div>
 
         <div className="pt-4">
-          <button
-            onClick={onSubmit}
-            disabled={isLoading || !settings.title || !settings.premise}
-            className={`w-full flex items-center justify-center space-x-2 py-3 rounded-lg text-white font-medium transition-all ${
-              isLoading || !settings.title || !settings.premise
-                ? 'bg-indigo-300 cursor-not-allowed'
-                : 'bg-indigo-600 hover:bg-indigo-700 shadow-md hover:shadow-lg'
-            }`}
-          >
-            {isLoading ? (
-              <span className="flex items-center">
-                <Loader2 className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" />
-                正在生成大纲...
-              </span>
+            {isLoading && onStop ? (
+                <button
+                    onClick={onStop}
+                    className="w-full flex items-center justify-center space-x-2 py-3 rounded-lg text-white font-medium transition-all bg-red-500 hover:bg-red-600 shadow-md hover:shadow-lg animate-pulse"
+                >
+                    <Square className="w-5 h-5 fill-current" />
+                    <span>停止生成 (Stop)</span>
+                </button>
             ) : (
-              <>
-                <PenTool className="w-5 h-5" />
-                <span>生成大纲</span>
-              </>
+                <button
+                    onClick={onSubmit}
+                    disabled={isLoading || !settings.title || !settings.premise || settings.genre.length === 0}
+                    className={`w-full flex items-center justify-center space-x-2 py-3 rounded-lg text-white font-medium transition-all ${
+                    isLoading || !settings.title || !settings.premise || settings.genre.length === 0
+                        ? 'bg-indigo-300 cursor-not-allowed'
+                        : 'bg-indigo-600 hover:bg-indigo-700 shadow-md hover:shadow-lg'
+                    }`}
+                >
+                    {isLoading ? (
+                    <span className="flex items-center">
+                        <Loader2 className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" />
+                        正在生成大纲...
+                    </span>
+                    ) : (
+                    <>
+                        <PenTool className="w-5 h-5" />
+                        <span>生成大纲</span>
+                    </>
+                    )}
+                </button>
             )}
-          </button>
         </div>
       </div>
     </div>
