@@ -270,14 +270,17 @@ const App: React.FC = () => {
           abortControllerRef.current = null;
       }
 
+      // Completely reset state
       setState({
         settings: getDefaultSettings(),
         chapters: [],
         characters: [],
         currentChapterId: null,
         status: 'idle',
+        consistencyReport: null,
         usage: { inputTokens: 0, outputTokens: 0 }
       });
+      setExpandedVolumes({});
       setLastAutoSaveTime(null);
       setSidebarOpen(true);
       setCurrentView('workspace');
@@ -565,8 +568,10 @@ const App: React.FC = () => {
              continue;
         }
 
+        // Add 5s delay between chapters to avoid rate limits
         if (i > 0) {
-            await new Promise(resolve => setTimeout(resolve, 3000)); 
+            console.log("Waiting 5s before next chapter...");
+            await new Promise(resolve => setTimeout(resolve, 5000)); 
         }
 
         setState(prev => {
@@ -575,42 +580,22 @@ const App: React.FC = () => {
             return { ...prev, chapters: nextChapters, currentChapterId: nextChapters[i].id };
         });
 
-        try {
-            let fullContent = "";
-            let stream = GeminiService.generateChapterStream(
-                settingsRef.current, 
-                chapter, 
-                cumulativeSummaries,
-                previousChapterContent,
-                state.characters, 
-                handleUsageUpdate
-            );
-            
-            for await (const chunk of stream) {
-                fullContent += chunk;
-                setState(prev => {
-                    const nextChapters = [...prev.chapters];
-                    nextChapters[i] = { ...nextChapters[i], content: fullContent };
-                    return { ...prev, chapters: nextChapters };
-                });
-            }
+        // Retry logic for Auto-Gen loop
+        let retries = 0;
+        const MAX_RETRIES = 1;
 
-            // --- Extension Loop for Auto Gen ---
-            const TARGET_WORD_COUNT = 4000;
-            let currentWordCount = getWordCount(fullContent);
-            let loops = 0;
-            while (currentWordCount < TARGET_WORD_COUNT && loops < 5) {
-                loops++;
-                stream = GeminiService.extendChapter(
-                    fullContent,
-                    settingsRef.current,
-                    chapter.title,
-                    state.characters,
-                    TARGET_WORD_COUNT,
-                    currentWordCount,
+        while (retries <= MAX_RETRIES) {
+            try {
+                let fullContent = "";
+                let stream = GeminiService.generateChapterStream(
+                    settingsRef.current, 
+                    chapter, 
+                    cumulativeSummaries,
+                    previousChapterContent,
+                    state.characters, 
                     handleUsageUpdate
                 );
-                fullContent += "\n\n";
+                
                 for await (const chunk of stream) {
                     fullContent += chunk;
                     setState(prev => {
@@ -619,42 +604,83 @@ const App: React.FC = () => {
                         return { ...prev, chapters: nextChapters };
                     });
                 }
-                currentWordCount = getWordCount(fullContent);
+
+                // --- Extension Loop for Auto Gen ---
+                const TARGET_WORD_COUNT = 4000;
+                let currentWordCount = getWordCount(fullContent);
+                let loops = 0;
+                while (currentWordCount < TARGET_WORD_COUNT && loops < 5) {
+                    loops++;
+                    stream = GeminiService.extendChapter(
+                        fullContent,
+                        settingsRef.current,
+                        chapter.title,
+                        state.characters,
+                        TARGET_WORD_COUNT,
+                        currentWordCount,
+                        handleUsageUpdate
+                    );
+                    fullContent += "\n\n";
+                    for await (const chunk of stream) {
+                        fullContent += chunk;
+                        setState(prev => {
+                            const nextChapters = [...prev.chapters];
+                            nextChapters[i] = { ...nextChapters[i], content: fullContent };
+                            return { ...prev, chapters: nextChapters };
+                        });
+                    }
+                    currentWordCount = getWordCount(fullContent);
+                }
+                // -----------------------------------
+
+                let summary = chapter.summary;
+                try {
+                    const genSummary = await GeminiService.summarizeChapter(fullContent, settingsRef.current, handleUsageUpdate); 
+                    if (genSummary) summary = genSummary;
+                } catch (e) { console.error(e) }
+
+                setState(prev => {
+                    const nextChapters = [...prev.chapters];
+                    nextChapters[i] = { 
+                        ...nextChapters[i], 
+                        content: fullContent, 
+                        summary: summary,
+                        isGenerating: false, 
+                        isDone: true 
+                    };
+                    return { ...prev, chapters: nextChapters };
+                });
+
+                cumulativeSummaries += `\nChapter ${chapter.id}: ${summary}`;
+                previousChapterContent = fullContent.slice(-8000);
+                
+                await performSave(state, true);
+                break; // Success, exit retry loop
+
+            } catch (error: any) {
+                console.error("Auto generation failed at chapter " + chapter.id, error);
+                
+                // Check for rate limit or network error
+                const isRateLimit = error.message?.includes('429') || error.message?.includes('quota') || error.message?.includes('RESOURCE_EXHAUSTED');
+                const isNetwork = error.message?.includes('network') || error.message?.includes('fetch failed');
+
+                if ((isRateLimit || isNetwork) && retries < MAX_RETRIES) {
+                    retries++;
+                    const waitTime = isRateLimit ? 60000 : 10000; // 60s for rate limit, 10s for network
+                    console.log(`Encountered error. Retrying Chapter ${chapter.id} in ${waitTime/1000}s...`);
+                    await new Promise(resolve => setTimeout(resolve, waitTime));
+                    continue; // Retry loop
+                }
+
+                // If exhausted retries or other error
+                setState(prev => {
+                    const nextChapters = [...prev.chapters];
+                    nextChapters[i] = { ...nextChapters[i], isGenerating: false };
+                    return { ...prev, chapters: nextChapters };
+                });
+                alert(`Auto-generation paused at Chapter ${chapter.id}: ${error.message || "Network/API Error"}`);
+                return; // Stop auto-gen entirely
             }
-            // -----------------------------------
-
-            let summary = chapter.summary;
-            try {
-                 const genSummary = await GeminiService.summarizeChapter(fullContent, settingsRef.current, handleUsageUpdate); 
-                 if (genSummary) summary = genSummary;
-            } catch (e) { console.error(e) }
-
-            setState(prev => {
-                const nextChapters = [...prev.chapters];
-                nextChapters[i] = { 
-                    ...nextChapters[i], 
-                    content: fullContent, 
-                    summary: summary,
-                    isGenerating: false, 
-                    isDone: true 
-                };
-                return { ...prev, chapters: nextChapters };
-            });
-
-            cumulativeSummaries += `\nChapter ${chapter.id}: ${summary}`;
-            previousChapterContent = fullContent.slice(-8000);
-            
-            await performSave(state, true);
-
-        } catch (error: any) {
-            console.error("Auto generation failed at chapter " + chapter.id, error);
-            setState(prev => {
-                const nextChapters = [...prev.chapters];
-                nextChapters[i] = { ...nextChapters[i], isGenerating: false };
-                return { ...prev, chapters: nextChapters };
-            });
-            alert(`Auto-generation paused at Chapter ${chapter.id}: ${error.message || "Network/API Error"}`);
-            break; 
         }
     }
   };
@@ -870,6 +896,7 @@ const App: React.FC = () => {
             </header>
             <main className="flex-1">
                 <SettingsForm 
+                    key={state.settings.id || 'new'}
                     settings={state.settings}
                     onSettingsChange={handleSettingsChange}
                     onSubmit={generateOutlineAndCharacters}

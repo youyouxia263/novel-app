@@ -60,7 +60,15 @@ async function withRetry<T>(operation: () => Promise<T>, retries = 3, baseDelay 
 
             if (isAborted || isSafetyBlock) throw error; 
             
-            if ((isRateLimit || isServer || isNetwork) && i < retries - 1) {
+            if (isRateLimit) {
+                // Aggressive backoff for rate limits: 10s, 20s, 40s
+                const delay = 10000 * Math.pow(2, i); 
+                console.warn(`API Rate Limit (${msg}). Retrying in ${delay/1000}s...`);
+                await wait(delay);
+                continue;
+            }
+
+            if ((isServer || isNetwork) && i < retries - 1) {
                 const delay = baseDelay * Math.pow(2, i); // 2s, 4s, 8s
                 console.warn(`API Error (${msg}). Retrying in ${delay}ms...`);
                 await wait(delay);
