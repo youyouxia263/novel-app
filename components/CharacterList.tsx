@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Character, NovelSettings } from '../types';
 import { Users, X, Copy, Download, Check, Edit2, Save, Plus, Trash2, Sparkles, Loader2 } from 'lucide-react';
@@ -108,6 +109,22 @@ const CharacterList: React.FC<CharacterListProps> = ({ characters, isOpen, onClo
       if (editingIndex === index) setEditingIndex(null);
   };
 
+  // Helper to safe render object content
+  const safeRender = (content: any) => {
+      if (typeof content === 'string') return content;
+      if (typeof content === 'object' && content !== null) {
+          try {
+              // Try to format it nicely if it's a map
+              return Object.entries(content)
+                .map(([k, v]) => `${k}: ${v}`)
+                .join('; ');
+          } catch (e) {
+              return JSON.stringify(content);
+          }
+      }
+      return String(content || '');
+  };
+
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col animate-in zoom-in-95 duration-200">
@@ -176,7 +193,7 @@ const CharacterList: React.FC<CharacterListProps> = ({ characters, isOpen, onClo
                             <div>
                                 <label className="block text-xs font-medium text-gray-500 mb-1">Name</label>
                                 <input 
-                                    value={editForm.name}
+                                    value={safeRender(editForm.name)}
                                     onChange={e => setEditForm({...editForm, name: e.target.value})}
                                     className="w-full text-sm border p-1 rounded"
                                 />
@@ -184,7 +201,7 @@ const CharacterList: React.FC<CharacterListProps> = ({ characters, isOpen, onClo
                             <div>
                                 <label className="block text-xs font-medium text-gray-500 mb-1">Role</label>
                                 <input 
-                                    value={editForm.role}
+                                    value={safeRender(editForm.role)}
                                     onChange={e => setEditForm({...editForm, role: e.target.value})}
                                     className="w-full text-sm border p-1 rounded"
                                 />
@@ -193,7 +210,7 @@ const CharacterList: React.FC<CharacterListProps> = ({ characters, isOpen, onClo
                         <div>
                             <label className="block text-xs font-medium text-gray-500 mb-1">Description</label>
                             <textarea 
-                                value={editForm.description}
+                                value={safeRender(editForm.description)}
                                 onChange={e => setEditForm({...editForm, description: e.target.value})}
                                 className="w-full text-sm border p-1 rounded h-20"
                             />
@@ -201,7 +218,7 @@ const CharacterList: React.FC<CharacterListProps> = ({ characters, isOpen, onClo
                         <div>
                             <label className="block text-xs font-medium text-gray-500 mb-1">Relationships</label>
                             <textarea 
-                                value={editForm.relationships}
+                                value={safeRender(editForm.relationships)}
                                 onChange={e => setEditForm({...editForm, relationships: e.target.value})}
                                 className="w-full text-sm border p-1 rounded h-16"
                             />
@@ -220,10 +237,10 @@ const CharacterList: React.FC<CharacterListProps> = ({ characters, isOpen, onClo
                 ) : (
                     <>
                         <div className="flex justify-between items-start mb-2">
-                            <h4 className="text-base font-bold text-gray-900">{char.name}</h4>
+                            <h4 className="text-base font-bold text-gray-900">{safeRender(char.name)}</h4>
                             <div className="flex items-center space-x-2">
                                 <span className="text-xs bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full font-medium border border-indigo-100">
-                                    {char.role}
+                                    {safeRender(char.role)}
                                 </span>
                                 {onUpdateCharacters && (
                                     <button 
@@ -236,8 +253,8 @@ const CharacterList: React.FC<CharacterListProps> = ({ characters, isOpen, onClo
                             </div>
                         </div>
                         <div className="space-y-2 text-sm text-gray-600">
-                            <p className="leading-relaxed"><span className="font-semibold text-gray-700">简介:</span> {char.description}</p>
-                            <p className="leading-relaxed bg-gray-50 p-2 rounded text-xs"><span className="font-semibold text-gray-700">人物关系:</span> {char.relationships}</p>
+                            <p className="leading-relaxed"><span className="font-semibold text-gray-700">简介:</span> {safeRender(char.description)}</p>
+                            <p className="leading-relaxed bg-gray-50 p-2 rounded text-xs"><span className="font-semibold text-gray-700">人物关系:</span> {safeRender(char.relationships)}</p>
                         </div>
                     </>
                 )}

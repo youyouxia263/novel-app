@@ -227,6 +227,11 @@ const App: React.FC = () => {
                  loaded.settings.plots = [];
               }
               
+              // Sanitize characters to prevent rendering crashes
+              if (loaded.characters && Array.isArray(loaded.characters)) {
+                  loaded.characters = loaded.characters.map(GeminiService.sanitizeCharacter);
+              }
+
               setState(loaded);
               setLastAutoSaveTime(new Date());
               setSidebarOpen(true);

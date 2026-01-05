@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { NovelSettings, Language, WritingTone, WritingStyle, NarrativePerspective, NovelType } from '../types';
 import { BookOpen, PenTool, Sparkles, Globe, Wand2, Loader2, Feather, Eye, Mic2, ScrollText, BookCopy, Globe2, Dna, Check, Square, Users, Tag, Layers, Type } from 'lucide-react';
-import { generatePremise, generateWorldSetting, expandText, generateCharacterConcepts } from '../services/geminiService';
+import { generatePremise, generateWorldSetting, expandText, generateCharacterConcepts, generateTitles } from '../services/geminiService';
 
 interface SettingsFormProps {
   settings: NovelSettings;
@@ -50,6 +50,10 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ settings, onSettingsChange,
   const [isGeneratingCharacters, setIsGeneratingCharacters] = useState(false);
   const [isExpandingCharacters, setIsExpandingCharacters] = useState(false);
   
+  // Title Generation State
+  const [isGeneratingTitles, setIsGeneratingTitles] = useState(false);
+  const [generatedTitles, setGeneratedTitles] = useState<string[]>([]);
+
   // UI State for Tabs
   const [categoryTab, setCategoryTab] = useState<'male' | 'female'>('male');
 
@@ -93,6 +97,23 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ settings, onSettingsChange,
             return; 
           }
           handleChange(field, [...currentList, item]);
+      }
+  };
+
+  const handleAiGenerateTitles = async () => {
+      if (!settings.mainCategory && !settings.premise) {
+          alert("请先选择分类或输入概要 (Please select a category or enter a premise first)");
+          return;
+      }
+      setIsGeneratingTitles(true);
+      try {
+          const titles = await generateTitles(settings);
+          setGeneratedTitles(titles);
+      } catch (error) {
+          console.error(error);
+          alert("生成标题失败 (Failed to generate titles)");
+      } finally {
+          setIsGeneratingTitles(false);
       }
   };
 
@@ -225,13 +246,38 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ settings, onSettingsChange,
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">小说标题 (Title)</label>
-                <input
-                    type="text"
-                    value={settings.title}
-                    onChange={(e) => handleChange('title', e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
-                    placeholder="例如：全球高武、我在精神病院学斩神"
-                />
+                <div className="flex gap-2">
+                    <input
+                        type="text"
+                        value={settings.title}
+                        onChange={(e) => handleChange('title', e.target.value)}
+                        className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
+                        placeholder="例如：全球高武、我在精神病院学斩神"
+                    />
+                    <button
+                        onClick={handleAiGenerateTitles}
+                        disabled={isGeneratingTitles || (!settings.mainCategory && !settings.premise)}
+                        className="flex items-center space-x-1 px-3 py-2 bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white rounded-lg transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                        title="AI 生成热门标题"
+                    >
+                        {isGeneratingTitles ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+                        <span className="text-xs font-bold hidden sm:inline">AI 标题</span>
+                    </button>
+                </div>
+                {/* Generated Titles Chips */}
+                {generatedTitles.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-2 animate-in fade-in slide-in-from-top-1">
+                        {generatedTitles.map((title, idx) => (
+                            <button
+                                key={idx}
+                                onClick={() => handleChange('title', title)}
+                                className="text-xs px-3 py-1 bg-rose-50 text-rose-700 border border-rose-100 rounded-full hover:bg-rose-100 hover:border-rose-200 transition-colors"
+                            >
+                                {title}
+                            </button>
+                        ))}
+                    </div>
+                )}
             </div>
             <div>
                  <label className="block text-sm font-medium text-gray-700 mb-1">写作语言 (Language)</label>
@@ -496,18 +542,24 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ settings, onSettingsChange,
                     className="w-full px-3 py-2 text-sm border border-orange-200 rounded-md focus:ring-1 focus:ring-orange-400 outline-none bg-white"
                   >
                     <option value="Neutral">中性 (Neutral)</option>
+                    <option value="Suspenseful">悬疑/紧张 (Suspenseful)</option>
                     <option value="Dark">暗黑/压抑 (Dark)</option>
                     <option value="Humorous">幽默 (Humorous)</option>
+                    <option value="Witty">机智 (Witty)</option>
                     <option value="Melancholic">忧伤 (Melancholic)</option>
                     <option value="Fast-paced">快节奏 (Fast-paced)</option>
                     <option value="Romantic">浪漫 (Romantic)</option>
                     <option value="Cynical">愤世嫉俗 (Cynical)</option>
+                    <option value="Inspirational">励志 (Inspirational)</option>
+                    <option value="Serious">严肃 (Serious)</option>
+                    <option value="Whimsical">异想天开 (Whimsical)</option>
+                    <option value="Dramatic">戏剧性 (Dramatic)</option>
                   </select>
                 </div>
 
                 <div>
                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1 flex items-center gap-1">
-                      <Feather size={12}/> Style (文笔)
+                      <Feather size={12}/> Complexity (文笔)
                    </label>
                    <select
                     value={settings.writingStyle}
@@ -518,6 +570,10 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ settings, onSettingsChange,
                      <option value="Moderate">标准 (Moderate)</option>
                      <option value="Complex">辞藻华丽 (Complex)</option>
                      <option value="Poetic">诗意 (Poetic)</option>
+                     <option value="Minimalist">极简主义 (Minimalist)</option>
+                     <option value="Descriptive">注重描写 (Descriptive)</option>
+                     <option value="Colloquial">口语化 (Colloquial)</option>
+                     <option value="Academic">学术/严谨 (Academic)</option>
                    </select>
                 </div>
 
@@ -533,6 +589,7 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ settings, onSettingsChange,
                      <option value="Third Person Limited">第三人称限知 (3rd Person Limited)</option>
                      <option value="Third Person Omniscient">第三人称全知 (3rd Person Omniscient)</option>
                      <option value="First Person">第一人称 (1st Person "I")</option>
+                     <option value="Second Person">第二人称 (2nd Person "You")</option>
                    </select>
                 </div>
              </div>

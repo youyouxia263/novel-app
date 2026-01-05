@@ -8,6 +8,7 @@ export const PROMPT_KEYS = {
     GENERATE_CHAPTER: 'generate_chapter',
     GENERATE_WORLD: 'generate_world',
     GENERATE_PREMISE: 'generate_premise',
+    GENERATE_TITLES: 'generate_titles',
     EXPAND_TEXT: 'expand_text',
     CHECK_CONSISTENCY: 'check_consistency',
     FIX_CONSISTENCY: 'fix_consistency',
@@ -92,6 +93,13 @@ Keep it under 300 words.`,
 Genres: {{genre}}. 
 {{language}}. 
 Return ONLY summary text.`,
+
+    [PROMPT_KEYS.GENERATE_TITLES]: `Task: Generate 5 catchy, trending, and click-worthy novel titles based on the info below.
+Genres: {{genre}}.
+Premise: {{premise}}.
+{{language}}.
+Style: Popular web novel trends (e.g., Tomato Novel/Webnovel style). Catchy, intriguing, maybe slightly long or descriptive if appropriate for the genre.
+Output: JSON Array of strings (e.g., ["Title 1", "Title 2"]).`,
 
     [PROMPT_KEYS.EXPAND_TEXT]: `You are a creative writing assistant.
 Task: Expand the following {{contextType}} for a {{genre}} novel titled "{{title}}".

@@ -58,6 +58,26 @@ const getSystemInstruction = (base: string, settings: NovelSettings) => {
     return base;
 };
 
+// Helper to sanitize character object to ensure fields are strings
+export const sanitizeCharacter = (char: any): Character => {
+    const ensureString = (val: any) => {
+        if (typeof val === 'string') return val;
+        if (val === null || val === undefined) return '';
+        if (typeof val === 'object') {
+            // Flatten object to string (e.g. relationship map)
+            return Object.entries(val).map(([k, v]) => `${k}: ${v}`).join('; ');
+        }
+        return String(val);
+    };
+
+    return {
+        name: ensureString(char.name),
+        role: ensureString(char.role),
+        description: ensureString(char.description),
+        relationships: ensureString(char.relationships),
+    };
+};
+
 async function withRetry<T>(operation: () => Promise<T>, retries = 3, baseDelay = 2000): Promise<T> {
     let lastError: any;
     for (let i = 0; i < retries; i++) {
@@ -466,7 +486,7 @@ export const generateOutline = async (settings: NovelSettings, signal?: AbortSig
           if (response.usageMetadata && onUsage) {
               onUsage({ input: response.usageMetadata.promptTokenCount || 0, output: response.usageMetadata.candidatesTokenCount || 0 });
           }
-          batchResult = cleanAndParseJson(response.text || "[]");
+          batchResult = cleanAndParseJson((response as any).text || "[]");
 
       } else {
           const url = getBaseUrl(settings);
@@ -525,12 +545,42 @@ const runSimpleGeneration = async (promptText: string, settings: NovelSettings, 
         if (settings.maxOutputTokens) config.maxOutputTokens = settings.maxOutputTokens;
         
         const response = await withRetry(() => ai.models.generateContent({ model, contents: promptText, config }));
-        result = response.text || "";
+        result = (response as any).text || "";
     } else {
         const url = getBaseUrl(settings);
         result = await fetchOpenAICompatible(url, apiKey, model, [{role: 'user', content: promptText}], systemInstruction, undefined, settings.maxOutputTokens);
     }
     return result;
+};
+
+export const generateTitles = async (settings: NovelSettings): Promise<string[]> => {
+    const template = getPromptTemplate(PROMPT_KEYS.GENERATE_TITLES, settings);
+    const prompt = fillPrompt(template, {
+        genre: buildGenreString(settings),
+        premise: settings.premise || "Untitled Story",
+        language: settings.language === 'zh' ? "Output: Chinese" : "Output: English",
+    });
+
+    const { model, apiKey, provider } = getModelConfig(settings);
+    
+    let resultText = "";
+    if (provider === 'gemini') {
+        const ai = new GoogleGenAI({ apiKey });
+        const responseSchema: Schema = {
+            type: Type.ARRAY,
+            items: { type: Type.STRING }
+        };
+        const config: any = { responseMimeType: "application/json", responseSchema };
+        if (settings.maxOutputTokens) config.maxOutputTokens = settings.maxOutputTokens;
+        const response = await withRetry(() => ai.models.generateContent({ model, contents: prompt, config }));
+        resultText = (response as any).text || "[]";
+    } else {
+        const url = getBaseUrl(settings);
+        resultText = await fetchOpenAICompatible(url, apiKey, model, [{role: 'user', content: prompt + "\nOutput JSON Array of strings."}], undefined, undefined, settings.maxOutputTokens);
+    }
+    
+    const parsed = cleanAndParseJson(resultText);
+    return Array.isArray(parsed) ? parsed : [];
 };
 
 export const generatePremise = async (title: string, currentPremise: string, settings: NovelSettings): Promise<string> => {
@@ -627,14 +677,16 @@ export const generateCharacters = async (settings: NovelSettings, signal?: Abort
         if (response.usageMetadata && onUsage) {
             onUsage({ input: response.usageMetadata.promptTokenCount || 0, output: response.usageMetadata.candidatesTokenCount || 0 });
         }
-        resultText = response.text || "[]";
+        resultText = (response as any).text || "[]";
     } else {
         const url = getBaseUrl(settings);
         resultText = await fetchOpenAICompatible(url, apiKey, model, [{role: 'user', content: prompt + "\nOutput JSON Array."}], undefined, signal, settings.maxOutputTokens, onUsage);
     }
     
     const parsed = cleanAndParseJson(resultText);
-    return Array.isArray(parsed) ? parsed : [];
+    const charArray = Array.isArray(parsed) ? parsed : [];
+    
+    return charArray.map(sanitizeCharacter);
 };
 
 export const generateSingleCharacter = async (settings: NovelSettings, existingCharacters: Character[]): Promise<Character> => {
@@ -663,13 +715,13 @@ export const generateSingleCharacter = async (settings: NovelSettings, existingC
         };
         const config: any = { responseMimeType: "application/json", responseSchema };
         const response = await withRetry(() => ai.models.generateContent({ model, contents: prompt, config }));
-        resultText = response.text || "{}";
+        resultText = (response as any).text || "{}";
     } else {
         const url = getBaseUrl(settings);
         resultText = await fetchOpenAICompatible(url, apiKey, model, [{role: 'user', content: prompt + "\nOutput JSON Object."}], undefined, undefined, settings.maxOutputTokens);
     }
     const parsed = cleanAndParseJson(resultText);
-    return parsed as Character;
+    return sanitizeCharacter(parsed);
 };
 
 export async function* continueWriting(content: string, settings: NovelSettings, chapterTitle: string, characters: Character[]): AsyncGenerator<string, void, unknown> {
@@ -694,8 +746,8 @@ export async function* continueWriting(content: string, settings: NovelSettings,
          const ai = new GoogleGenAI({ apiKey });
          const stream = await ai.models.generateContentStream({ model, contents: prompt, config: { maxOutputTokens: settings.maxOutputTokens } });
          for await (const chunk of stream) {
-             const c = chunk as any;
-             if (c.text) yield c.text;
+             const c = chunk as GenerateContentResponse;
+             if ((c as any).text) yield (c as any).text;
          }
     } else {
          const url = getBaseUrl(settings);
@@ -731,7 +783,7 @@ export const checkGrammar = async (content: string, settings: NovelSettings): Pr
         };
         const config: any = { responseMimeType: "application/json", responseSchema };
         const response = await withRetry(() => ai.models.generateContent({ model, contents: prompt, config }));
-        resultText = response.text || "[]";
+        resultText = (response as any).text || "[]";
     } else {
         const url = getBaseUrl(settings);
         resultText = await fetchOpenAICompatible(url, apiKey, model, [{role: 'user', content: prompt}], undefined, undefined, settings.maxOutputTokens);
@@ -779,11 +831,11 @@ export async function* generateChapterStream(settings: NovelSettings, chapter: C
         });
         
         for await (const chunk of stream) {
-            const c = chunk as any;
+            const c = chunk as GenerateContentResponse;
             if (c.usageMetadata && onUsage) {
                 onUsage({ input: 0, output: c.usageMetadata.candidatesTokenCount || 0 });
             }
-            if (c.text) yield c.text;
+            if ((c as any).text) yield (c as any).text;
         }
     } else {
         const url = getBaseUrl(settings);
@@ -809,9 +861,9 @@ export async function* extendChapter(currentContent: string, settings: NovelSett
         const ai = new GoogleGenAI({ apiKey });
         const stream = await ai.models.generateContentStream({ model, contents: prompt, config: { maxOutputTokens: settings.maxOutputTokens } });
         for await (const chunk of stream) {
-             const c = chunk as any;
+             const c = chunk as GenerateContentResponse;
              if (c.usageMetadata && onUsage) onUsage({ input: 0, output: c.usageMetadata.candidatesTokenCount || 0 });
-             if (c.text) yield c.text;
+             if ((c as any).text) yield (c as any).text;
         }
     } else {
         const url = getBaseUrl(settings);

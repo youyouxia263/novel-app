@@ -4,9 +4,16 @@ export type NovelType = 'long' | 'short';
 
 export type ModelProvider = 'gemini' | 'alibaba' | 'volcano' | 'custom';
 
-export type WritingTone = 'Neutral' | 'Dark' | 'Humorous' | 'Melancholic' | 'Fast-paced' | 'Romantic' | 'Cynical';
-export type WritingStyle = 'Simple' | 'Moderate' | 'Complex' | 'Poetic';
-export type NarrativePerspective = 'First Person' | 'Third Person Limited' | 'Third Person Omniscient';
+export type WritingTone = 
+  | 'Neutral' | 'Dark' | 'Humorous' | 'Melancholic' | 'Fast-paced' | 'Romantic' | 'Cynical' 
+  | 'Suspenseful' | 'Whimsical' | 'Inspirational' | 'Serious' | 'Witty' | 'Dramatic';
+
+export type WritingStyle = 
+  | 'Simple' | 'Moderate' | 'Complex' | 'Poetic' 
+  | 'Minimalist' | 'Descriptive' | 'Colloquial' | 'Academic';
+
+export type NarrativePerspective = 
+  | 'First Person' | 'Third Person Limited' | 'Third Person Omniscient' | 'Second Person';
 
 export type StorageType = 'sqlite' | 'mysql';
 
