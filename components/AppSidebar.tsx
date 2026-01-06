@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Plus, Book, Trash2, FileText, Layout, Settings, Cpu, MessageSquareQuote, ChevronDown, ChevronRight, Database, Globe, Layers } from 'lucide-react';
+import { Plus, Book, Trash2, FileText, Layout, Settings, Cpu, MessageSquareQuote, ChevronDown, ChevronRight, Database, Globe, Layers, Upload } from 'lucide-react';
 import { NovelSettings } from '../types';
 
 interface SavedNovel {
@@ -21,9 +21,10 @@ interface AppSidebarProps {
   onSettingsChange: (settings: NovelSettings) => void;
   currentView: ViewType;
   onNavigate: (view: ViewType) => void;
+  onImport?: () => void; // Optional for backward compatibility if needed, but we'll use it
 }
 
-const AppSidebar: React.FC<AppSidebarProps> = ({ novels, currentNovelId, onSelect, onCreate, onDelete, currentView, onNavigate }) => {
+const AppSidebar: React.FC<AppSidebarProps> = ({ novels, currentNovelId, onSelect, onCreate, onDelete, currentView, onNavigate, onImport }) => {
   const [isLibraryExpanded, setIsLibraryExpanded] = useState(true);
   const [isSettingsExpanded, setIsSettingsExpanded] = useState(true);
   
@@ -57,6 +58,15 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ novels, currentNovelId, onSelec
           <Plus size={18} className="group-hover:rotate-90 transition-transform duration-200" />
           <span>新建作品 (New)</span>
         </button>
+        {onImport && (
+            <button
+            onClick={onImport}
+            className="w-full flex items-center justify-center space-x-2 bg-gray-800 hover:bg-gray-700 text-gray-300 py-2.5 rounded-lg transition-all border border-gray-700 font-medium text-sm group"
+            >
+            <Upload size={18} />
+            <span>导入小说 (Import)</span>
+            </button>
+        )}
       </div>
 
       {/* Library Section */}
@@ -183,7 +193,7 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ novels, currentNovelId, onSelec
       
       {/* Footer Info */}
       <div className="p-4 border-t border-gray-800 text-[10px] text-gray-600 text-center flex justify-between items-center">
-         <span>v1.4.0</span>
+         <span>v1.5.0</span>
          <span className="flex items-center gap-1 opacity-50">Vol. Support</span>
       </div>
     </div>

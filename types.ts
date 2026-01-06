@@ -15,6 +15,10 @@ export type WritingStyle =
 export type NarrativePerspective = 
   | 'First Person' | 'Third Person Limited' | 'Third Person Omniscient' | 'Second Person';
 
+export type NarrativePacing = 'Fast' | 'Moderate' | 'Slow';
+
+export type RhetoricLevel = 'Plain' | 'Moderate' | 'Rich';
+
 export type StorageType = 'sqlite' | 'mysql';
 
 export interface StorageConfig {
@@ -44,6 +48,68 @@ export interface TagOption {
     label: string;
 }
 
+export interface WorldLocation {
+    id: string;
+    name: string;
+    description: string;
+    x: number;
+    y: number;
+    type: 'city' | 'landmark' | 'region';
+}
+
+export interface WorldEvent {
+    id: string;
+    year: string;
+    description: string;
+}
+
+export interface WorldTerm {
+    id: string;
+    term: string;
+    definition: string;
+    category: string;
+}
+
+export interface WorldData {
+    geography: string;
+    society: string;
+    culture: string;
+    technology: string;
+    locations: WorldLocation[];
+    timeline: WorldEvent[];
+    encyclopedia: WorldTerm[];
+}
+
+// Plot Planning Types
+export interface PlotNode {
+    id: string;
+    title: string;
+    description: string;
+    chapterRange?: string; 
+    type: 'inciting_incident' | 'turning_point' | 'midpoint' | 'climax' | 'resolution' | 'foreshadowing' | 'callback';
+    storylineId: string;
+    
+    // Advanced Plot Features
+    tension: number; // 1-10 scale
+    causalLink?: string; // ID of the node that caused this event
+    foreshadowLink?: string; // ID of the node this foreshadows or calls back to
+}
+
+export interface Storyline {
+    id: string;
+    name: string; // e.g., "Main Plot", "Romance Subplot"
+    description: string;
+    type: 'main' | 'sub';
+}
+
+export interface PlotData {
+    act1: string; // Setup
+    act2: string; // Confrontation
+    act3: string; // Resolution
+    storylines: Storyline[];
+    nodes: PlotNode[];
+}
+
 export interface NovelSettings {
   id?: string; // UUID for persistence
   title: string;
@@ -60,7 +126,12 @@ export interface NovelSettings {
   targetChapterWordCount?: number; // Target words per chapter
   chapterCount: number;
   language: Language;
-  worldSetting?: string;
+  
+  worldSetting?: string; // Summary string for prompting
+  structuredWorld?: WorldData; // Detailed world building data
+  
+  plotData?: PlotData; // Narrative structure data
+
   mainCharacters?: string; 
   
   // Model Configuration (Active Session)
@@ -77,6 +148,8 @@ export interface NovelSettings {
   writingTone: WritingTone;
   writingStyle: WritingStyle;
   narrativePerspective: NarrativePerspective;
+  pacing: NarrativePacing;
+  rhetoricLevel: RhetoricLevel;
 
   // Storage Configuration
   storage: StorageConfig;
@@ -90,11 +163,32 @@ export interface AppearanceSettings {
   theme: 'light' | 'sepia' | 'dark';
 }
 
+// Big 5 Personality Traits
+export interface PersonalityTraits {
+    openness: number; // 0-100
+    conscientiousness: number;
+    extraversion: number;
+    agreeableness: number;
+    neuroticism: number;
+}
+
 export interface Character {
   name: string;
   role: string;
   description: string;
   relationships: string;
+  // New Fields for Consistency & Visualization
+  imageUrl?: string;
+  voiceGuide?: string; // Dialogue style instructions
+  arc?: string; // Development trajectory
+  // Advanced Analysis
+  psychology?: string;
+  goals?: string;
+  
+  // Detailed Fields
+  personalityTags?: PersonalityTraits;
+  backgroundStory?: string;
+  skills?: string;
 }
 
 export interface Chapter {

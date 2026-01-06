@@ -1,8 +1,8 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { AppearanceSettings, Chapter, NovelSettings, GrammarIssue, Character } from '../types';
-import { Type, AlignLeft, AlignJustify, Moon, Sun, Monitor, ArrowUpDown, Home, ChevronRight, Edit3, Save, X, Sparkles, Loader2, AlertTriangle, FileText, BookOpen, Copy, Check, SpellCheck, PenLine, FileCode, RefreshCw, Square } from 'lucide-react';
-import { continueWriting, checkGrammar, autoCorrectGrammar } from '../services/geminiService';
+import { Type, AlignLeft, AlignJustify, Moon, Sun, Monitor, ArrowUpDown, Home, ChevronRight, Edit3, Save, X, Sparkles, Loader2, AlertTriangle, FileText, BookOpen, Copy, Check, SpellCheck, PenLine, FileCode, RefreshCw, Square, Activity } from 'lucide-react';
+import { continueWriting, checkGrammar, autoCorrectGrammar, analyzePacing } from '../services/geminiService';
 import GrammarReport from './GrammarReport';
 
 interface ReaderProps {
@@ -41,6 +41,11 @@ const Reader: React.FC<ReaderProps> = ({
   const [grammarIssues, setGrammarIssues] = useState<GrammarIssue[]>([]);
   const [showGrammarReport, setShowGrammarReport] = useState(false);
   const [isFixingGrammar, setIsFixingGrammar] = useState(false);
+
+  // Pacing
+  const [isAnalyzingPacing, setIsAnalyzingPacing] = useState(false);
+  const [pacingReport, setPacingReport] = useState<string | null>(null);
+  const [showPacingModal, setShowPacingModal] = useState(false);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const contentEndRef = useRef<HTMLDivElement>(null);
@@ -173,6 +178,21 @@ const Reader: React.FC<ReaderProps> = ({
           alert("Auto-fix failed.");
       } finally {
           setIsFixingGrammar(false);
+      }
+  };
+
+  const handlePacingAnalysis = async () => {
+      const text = isEditing ? editContent : chapter?.content;
+      if(!text) return;
+      setIsAnalyzingPacing(true);
+      setShowPacingModal(true);
+      try {
+          const report = await analyzePacing(text, settings);
+          setPacingReport(report);
+      } catch (e: any) {
+          setPacingReport("Analysis failed: " + e.message);
+      } finally {
+          setIsAnalyzingPacing(false);
       }
   };
 
@@ -336,9 +356,6 @@ const Reader: React.FC<ReaderProps> = ({
                         title="Copy as Markdown"
                     >
                         {mdCopySuccess ? <Check size={16} className="text-green-600" /> : <FileCode size={16} />}
-                        <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-black/80 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-                            Copy Markdown
-                        </span>
                     </button>
 
                     <button
@@ -347,9 +364,6 @@ const Reader: React.FC<ReaderProps> = ({
                         title="Copy Text"
                     >
                         {copySuccess ? <Check size={16} className="text-green-600" /> : <Copy size={16} />}
-                         <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-black/80 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-                            Copy Text
-                        </span>
                     </button>
 
                      <button
@@ -361,6 +375,15 @@ const Reader: React.FC<ReaderProps> = ({
                         <SpellCheck size={16} />
                     </button>
 
+                    <button
+                        onClick={handlePacingAnalysis}
+                        disabled={isAnalyzingPacing || isBusy}
+                        className={`p-1.5 rounded-md hover:bg-black/5 transition-colors ${isAnalyzingPacing ? 'text-indigo-400 animate-pulse' : 'text-gray-500 hover:text-indigo-600'}`}
+                        title="Analyze Pacing & Tension"
+                    >
+                        <Activity size={16} />
+                    </button>
+
                     <button 
                         onClick={onRewrite}
                         disabled={isBusy}
@@ -368,9 +391,6 @@ const Reader: React.FC<ReaderProps> = ({
                         title="Rewrite Chapter"
                     >
                         <RefreshCw size={16} />
-                         <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-black/80 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-                            Rewrite
-                        </span>
                     </button>
 
                     <button 
@@ -485,6 +505,27 @@ const Reader: React.FC<ReaderProps> = ({
         onAutoFix={handleAutoFixGrammar}
         isFixing={isFixingGrammar}
       />
+
+      {/* Simple Pacing Analysis Modal */}
+      {showPacingModal && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in">
+              <div className="bg-white rounded-xl shadow-xl w-full max-w-lg p-6 max-h-[80vh] flex flex-col">
+                  <div className="flex justify-between items-center mb-4">
+                      <h3 className="font-bold flex items-center gap-2 text-indigo-600"><Activity size={18}/> Pacing & Tension Analysis</h3>
+                      <button onClick={() => setShowPacingModal(false)}><X size={18} className="text-gray-400 hover:text-gray-600"/></button>
+                  </div>
+                  <div className="flex-1 overflow-y-auto bg-gray-50 p-4 rounded text-sm text-gray-700 whitespace-pre-wrap">
+                      {isAnalyzingPacing ? (
+                          <div className="flex items-center justify-center h-40">
+                              <Loader2 className="animate-spin text-indigo-500 w-8 h-8"/>
+                          </div>
+                      ) : (
+                          pacingReport || "No analysis available."
+                      )}
+                  </div>
+              </div>
+          </div>
+      )}
     </div>
   );
 };

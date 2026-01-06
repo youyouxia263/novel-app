@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
-import { NovelSettings, Language, WritingTone, WritingStyle, NarrativePerspective, NovelType } from '../types';
-import { BookOpen, PenTool, Sparkles, Globe, Wand2, Loader2, Feather, Eye, Mic2, ScrollText, BookCopy, Globe2, Dna, Check, Square, Users, Tag, Layers, Type } from 'lucide-react';
+import { NovelSettings, Language, WritingTone, WritingStyle, NarrativePerspective, NovelType, NarrativePacing, RhetoricLevel } from '../types';
+import { BookOpen, PenTool, Sparkles, Globe, Wand2, Loader2, Feather, Eye, Mic2, ScrollText, BookCopy, Globe2, Dna, Check, Square, Users, Tag, Layers, Type, Gauge, Palette } from 'lucide-react';
 import { generatePremise, generateWorldSetting, expandText, generateCharacterConcepts, generateTitles } from '../services/geminiService';
 
 interface SettingsFormProps {
@@ -531,7 +531,7 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ settings, onSettingsChange,
                 <span>写作风格 (Writing Style)</span>
              </div>
              
-             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1 flex items-center gap-1">
                     <Mic2 size={12}/> Tone (基调)
@@ -579,6 +579,36 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ settings, onSettingsChange,
 
                 <div>
                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1 flex items-center gap-1">
+                      <Gauge size={12}/> Pacing (节奏)
+                   </label>
+                   <select
+                    value={settings.pacing || 'Moderate'}
+                    onChange={(e) => handleChange('pacing', e.target.value as NarrativePacing)}
+                    className="w-full px-3 py-2 text-sm border border-orange-200 rounded-md focus:ring-1 focus:ring-orange-400 outline-none bg-white"
+                   >
+                     <option value="Fast">快节奏 (Fast-paced)</option>
+                     <option value="Moderate">中等 (Moderate)</option>
+                     <option value="Slow">慢节奏 (Slow-paced)</option>
+                   </select>
+                </div>
+
+                <div>
+                   <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1 flex items-center gap-1">
+                      <Palette size={12}/> Rhetoric (文采)
+                   </label>
+                   <select
+                    value={settings.rhetoricLevel || 'Moderate'}
+                    onChange={(e) => handleChange('rhetoricLevel', e.target.value as RhetoricLevel)}
+                    className="w-full px-3 py-2 text-sm border border-orange-200 rounded-md focus:ring-1 focus:ring-orange-400 outline-none bg-white"
+                   >
+                     <option value="Plain">平实 (Plain)</option>
+                     <option value="Moderate">适中 (Balanced)</option>
+                     <option value="Rich">华丽/丰富 (Rich)</option>
+                   </select>
+                </div>
+
+                <div>
+                   <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1 flex items-center gap-1">
                       <Eye size={12}/> Perspective (视角)
                    </label>
                    <select
@@ -586,10 +616,10 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ settings, onSettingsChange,
                     onChange={(e) => handleChange('narrativePerspective', e.target.value as NarrativePerspective)}
                     className="w-full px-3 py-2 text-sm border border-orange-200 rounded-md focus:ring-1 focus:ring-orange-400 outline-none bg-white"
                    >
-                     <option value="Third Person Limited">第三人称限知 (3rd Person Limited)</option>
-                     <option value="Third Person Omniscient">第三人称全知 (3rd Person Omniscient)</option>
-                     <option value="First Person">第一人称 (1st Person "I")</option>
-                     <option value="Second Person">第二人称 (2nd Person "You")</option>
+                     <option value="Third Person Limited">第三人称限知</option>
+                     <option value="Third Person Omniscient">第三人称全知</option>
+                     <option value="First Person">第一人称 (我)</option>
+                     <option value="Second Person">第二人称 (你)</option>
                    </select>
                 </div>
              </div>

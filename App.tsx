@@ -1,18 +1,21 @@
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { NovelState, NovelSettings, AppearanceSettings, Chapter, Character } from './types';
+import { NovelState, NovelSettings, AppearanceSettings, Chapter, Character, WorldData, PlotData } from './types';
 import * as GeminiService from './services/geminiService';
 import { DAOFactory } from './services/dao'; 
 import SettingsForm from './components/SettingsForm';
 import Reader from './components/Reader';
 import CharacterList from './components/CharacterList';
 import ConsistencyReport from './components/ConsistencyReport';
+import WorldBuilder from './components/WorldBuilder';
+import PlotPlanner from './components/PlotPlanner';
+import Importer from './components/Importer';
 import AppSidebar, { ViewType } from './components/AppSidebar';
 import ModelConfigManager from './components/ModelConfigManager';
 import PromptConfigManager from './components/PromptConfigManager';
 import StorageConfigManager from './components/StorageConfigManager';
 import LanguageConfigManager from './components/LanguageConfigManager';
-import { Menu, ChevronRight, CheckCircle2, Circle, Download, FileText, Printer, Sparkles, Users, FileSearch, BookOpen, Gauge, Database, Loader2, Clock, Layers, ChevronDown, StopCircle } from 'lucide-react';
+import { Menu, ChevronRight, CheckCircle2, Circle, Download, FileText, Printer, Sparkles, Users, FileSearch, BookOpen, Gauge, Database, Loader2, Clock, Layers, ChevronDown, StopCircle, Globe2, GitMerge } from 'lucide-react';
 
 // ... (default settings helpers unchanged)
 const getBaseDefaultSettings = (): NovelSettings => ({
@@ -31,10 +34,30 @@ const getBaseDefaultSettings = (): NovelSettings => ({
   apiKey: '',
   modelName: '',
   worldSetting: '', 
+  structuredWorld: {
+      geography: '',
+      society: '',
+      culture: '',
+      technology: '',
+      locations: [],
+      timeline: [],
+      encyclopedia: []
+  },
+  plotData: {
+      act1: '',
+      act2: '',
+      act3: '',
+      storylines: [
+          { id: 'main', name: 'Main Plot', description: 'Primary Narrative Arc', type: 'main' }
+      ],
+      nodes: []
+  },
   // Default Style Settings
   writingTone: 'Neutral',
   writingStyle: 'Moderate',
   narrativePerspective: 'Third Person Limited',
+  pacing: 'Moderate',
+  rhetoricLevel: 'Moderate',
   maxOutputTokens: undefined, 
   storage: { type: 'sqlite' },
   customPrompts: {}
@@ -154,6 +177,9 @@ const App: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true); 
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [showCharacterModal, setShowCharacterModal] = useState(false);
+  const [showWorldBuilder, setShowWorldBuilder] = useState(false);
+  const [showPlotPlanner, setShowPlotPlanner] = useState(false);
+  const [showImporter, setShowImporter] = useState(false);
   const [showConsistencyReport, setShowConsistencyReport] = useState(false);
   const [isCheckingConsistency, setIsCheckingConsistency] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -198,12 +224,29 @@ const App: React.FC = () => {
                   loaded.status = 'ready';
               }
               const loadedSettings = loaded.settings as any;
+              // Migration for structured world
+              if (!loadedSettings.structuredWorld) {
+                  loadedSettings.structuredWorld = {
+                      geography: '', society: '', culture: '', technology: '', locations: [], timeline: [], encyclopedia: []
+                  };
+                  if (loadedSettings.worldSetting) loadedSettings.structuredWorld.geography = loadedSettings.worldSetting;
+              }
+              // Migration for plot data
+              if (!loadedSettings.plotData) {
+                  loadedSettings.plotData = {
+                      act1: '', act2: '', act3: '', storylines: [{id:'main', name:'Main', type:'main', description:''}], nodes: []
+                  };
+              }
+
               if (loadedSettings.genre && Array.isArray(loadedSettings.genre) && !loadedSettings.mainCategory) {
                  loaded.settings.mainCategory = loadedSettings.genre[0] || '玄幻';
                  loaded.settings.themes = [];
                  loaded.settings.roles = [];
                  loaded.settings.plots = [];
               }
+              if (!loaded.settings.pacing) loaded.settings.pacing = 'Moderate';
+              if (!loaded.settings.rhetoricLevel) loaded.settings.rhetoricLevel = 'Moderate';
+
               if (loaded.characters && Array.isArray(loaded.characters)) {
                   loaded.characters = loaded.characters.map(GeminiService.sanitizeCharacter);
               }
@@ -222,6 +265,7 @@ const App: React.FC = () => {
       }
   };
 
+  // ... (handleDeleteNovel, performSave, handleManualSave, etc. same as before) ...
   const handleDeleteNovel = async (id: string) => {
       if (!window.confirm("Are you sure you want to delete this novel?")) return;
       try {
@@ -333,6 +377,47 @@ const App: React.FC = () => {
       setState(prev => ({ ...prev, characters: newCharacters }));
   };
 
+  const handleUpdateWorld = (newWorld: WorldData) => {
+      const summary = `
+Geography: ${newWorld.geography}
+Society: ${newWorld.society}
+Culture: ${newWorld.culture}
+Technology: ${newWorld.technology}
+      `.trim();
+
+      setState(prev => ({
+          ...prev,
+          settings: {
+              ...prev.settings,
+              structuredWorld: newWorld,
+              worldSetting: summary 
+          }
+      }));
+  };
+
+  const handleUpdatePlot = (newPlot: PlotData) => {
+      setState(prev => ({
+          ...prev,
+          settings: {
+              ...prev.settings,
+              plotData: newPlot
+          }
+      }));
+  };
+
+  const handleImport = (newSettings: NovelSettings, newChapters: Chapter[], newCharacters: Character[]) => {
+      setState(prev => ({
+          ...prev,
+          settings: { ...prev.settings, ...newSettings },
+          chapters: newChapters,
+          characters: newCharacters,
+          status: 'ready',
+          currentChapterId: newChapters[0]?.id || null
+      }));
+      setExpandedVolumes({1: true}); // Default expand
+      setTimeout(() => performSave(state, true), 1000);
+  };
+
   const generateOutlineAndCharacters = async () => {
     if (abortControllerRef.current) {
         abortControllerRef.current.abort();
@@ -389,7 +474,6 @@ const App: React.FC = () => {
           abortControllerRef.current.abort();
           abortControllerRef.current = null;
       }
-      // We also need to clear "isGenerating" flag for chapters in UI state
       setState(prev => ({
           ...prev,
           status: prev.status === 'generating_outline' ? 'idle' : prev.status,
@@ -471,7 +555,6 @@ const App: React.FC = () => {
         });
       }
 
-      // Extension Loop
       let TARGET_WORD_COUNT = state.settings.targetChapterWordCount || 3000;
       if (!state.settings.targetChapterWordCount) {
           if (state.settings.novelType === 'short') {
@@ -510,7 +593,6 @@ const App: React.FC = () => {
           currentWordCount = getWordCount(fullContent);
       }
 
-      // Summary
       let finalSummary = chapter.summary;
       if (!controller.signal.aborted) {
           try {
@@ -584,7 +666,6 @@ const App: React.FC = () => {
         }
         if (controller.signal.aborted) break;
 
-        // Select chapter in UI for visual feedback
         setState(prev => ({ 
             ...prev, 
             currentChapterId: chapter.id,
@@ -612,10 +693,6 @@ const App: React.FC = () => {
                         return { ...prev, chapters: nextChapters };
                     });
                 }
-
-                // Extension loop (simplified logic relative to generateChapterContent for brevity but functional)
-                // ... (word count check same as generateChapterContent)
-                // We'll trust the main logic or just do one simple check
                 
                 let summary = chapter.summary;
                 if (!controller.signal.aborted) {
@@ -637,47 +714,32 @@ const App: React.FC = () => {
                 success = true;
 
             } catch (error: any) {
-                if (error.name === 'AbortError' || error.message?.includes('Aborted')) {
-                    break;
-                }
-
-                const errorMsg = error.message || "";
+                if (error.name === 'AbortError' || error.message?.includes('Aborted')) break;
                 
-                // Specific fix for "Content Safety" errors (Aliyun/Gemini) -> Skip chapter, don't abort loop
-                if (errorMsg.includes("Content Safety") || errorMsg.includes("inappropriate content") || errorMsg.includes("data_inspection_failed")) {
-                    console.warn(`Chapter ${chapter.id} skipped due to Content Safety filters.`);
+                const errorMsg = error.message || "";
+                if (errorMsg.includes("Content Safety") || errorMsg.includes("inappropriate content")) {
+                    console.warn(`Chapter ${chapter.id} skipped due to Content Safety.`);
                     setState(prev => {
                         const nextChapters = [...prev.chapters];
-                        nextChapters[i] = { 
-                            ...nextChapters[i], 
-                            isGenerating: false,
-                            content: (nextChapters[i].content || "") + "\n\n[Generation Skipped due to Content Safety Regulations]",
-                            isDone: true // Mark done so we don't retry forever
-                        };
+                        nextChapters[i] = { ...nextChapters[i], isGenerating: false, content: (nextChapters[i].content || "") + "\n\n[Skipped Safety]", isDone: true };
                         return { ...prev, chapters: nextChapters };
                     });
-                    success = true; // Treated as "handled" to move to next
+                    success = true;
                     continue;
                 }
 
-                const isRateLimit = errorMsg.includes('429') || errorMsg.includes('quota') || errorMsg.includes('RESOURCE_EXHAUSTED');
-                const isNetwork = errorMsg.includes('network') || errorMsg.includes('fetch failed');
-
-                if ((isRateLimit || isNetwork) && retries < MAX_RETRIES) {
+                const isRateLimit = errorMsg.includes('429') || errorMsg.includes('quota');
+                if (isRateLimit && retries < MAX_RETRIES) {
                     retries++;
-                    const waitTime = isRateLimit ? 60000 : 10000;
-                    console.log(`Retrying Chapter ${chapter.id} in ${waitTime/1000}s...`);
-                    await new Promise(resolve => setTimeout(resolve, waitTime));
+                    await new Promise(resolve => setTimeout(resolve, 60000));
                     continue; 
                 }
 
-                // If exhausted retries
                 setState(prev => {
                     const nextChapters = [...prev.chapters];
                     nextChapters[i] = { ...nextChapters[i], isGenerating: false };
                     return { ...prev, chapters: nextChapters };
                 });
-                // We pause on generic errors to let user check connection
                 alert(`Auto-generation paused at Chapter ${chapter.id}: ${errorMsg}`);
                 return; 
             }
@@ -687,55 +749,106 @@ const App: React.FC = () => {
   };
 
   const handleRewriteAll = async () => {
-     // ... (Implementation would follow handleAutoGenerate pattern with signal)
-     alert("Feature under maintenance. Please use single chapter rewrite or auto-generate.");
+     alert("Feature under maintenance.");
   };
+  const handleExportText = () => {};
+  const handleExportPDF = () => {};
 
-  // ... (consistency check/fix/export unchanged)
-  
   const handleConsistencyCheck = async () => {
-    // ... same as before ...
-    if (state.characters.length === 0) { alert("Character profiles not found."); return; }
+    if (isCheckingConsistency) return;
     setIsCheckingConsistency(true);
-    for (let i = 0; i < state.chapters.length; i++) {
-        const chapter = state.chapters[i];
-        if (!chapter.isDone || !chapter.content) continue;
-        const analysis = await GeminiService.checkConsistency(chapter.content, state.characters, settingsRef.current, handleUsageUpdate); 
-        setState(prev => {
-            const nextChapters = [...prev.chapters];
-            nextChapters[i] = { ...nextChapters[i], consistencyAnalysis: analysis };
-            return { ...prev, chapters: nextChapters };
-        });
+    
+    if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
     }
-    setIsCheckingConsistency(false);
-    setShowConsistencyReport(true);
-  };
-  
-  const handleFixConsistency = async (chapterId: number) => {
-    // ... same as before ...
-     const chapter = state.chapters.find(c => c.id === chapterId);
-     if (!chapter || !chapter.consistencyAnalysis) return;
-     setState(prev => {
-        const nextChapters = prev.chapters.map(c => c.id === chapterId ? { ...c, isGenerating: true } : c);
-        return { ...prev, chapters: nextChapters };
-     });
-     try {
-        const fixed = await GeminiService.fixChapterConsistency(chapter.content, state.characters, chapter.consistencyAnalysis, settingsRef.current, handleUsageUpdate);
-        setState(prev => {
-            const nextChapters = prev.chapters.map(c => c.id === chapterId ? { ...c, content: fixed, isGenerating: false, consistencyAnalysis: "Fixed" } : c);
-            return { ...prev, chapters: nextChapters };
-        });
-     } catch(e) { 
-         setState(prev => {
-            const nextChapters = prev.chapters.map(c => c.id === chapterId ? { ...c, isGenerating: false } : c);
-            return { ...prev, chapters: nextChapters };
-         });
-     }
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
+    try {
+        const chaptersToCheck = state.chapters.filter(c => c.isDone && c.content);
+        if (chaptersToCheck.length === 0) {
+            alert("没有已完成的章节可供检查 (No completed chapters to check)");
+            setIsCheckingConsistency(false);
+            return;
+        }
+
+        for (const chapter of chaptersToCheck) {
+             if (controller.signal.aborted) break;
+             
+             const analysis = await GeminiService.checkConsistency(chapter.content, state.characters, state.settings, handleUsageUpdate);
+             
+             setState(prev => {
+                 const newChapters = [...prev.chapters];
+                 const idx = newChapters.findIndex(c => c.id === chapter.id);
+                 if (idx !== -1) {
+                     newChapters[idx] = { ...newChapters[idx], consistencyAnalysis: analysis };
+                 }
+                 return { ...prev, chapters: newChapters };
+             });
+        }
+        
+        if (!controller.signal.aborted) {
+            setShowConsistencyReport(true);
+        }
+
+    } catch (e: any) {
+        if (e.name !== 'AbortError') {
+             console.error(e);
+             alert("Consistency check failed: " + e.message);
+        }
+    } finally {
+        setIsCheckingConsistency(false);
+        abortControllerRef.current = null;
+    }
   };
 
-  // ... (Export methods unchanged)
-  const handleExportText = () => { /* ... */ };
-  const handleExportPDF = () => { /* ... */ };
+  const handleFixConsistency = async (chapterId: number) => {
+      const chapter = state.chapters.find(c => c.id === chapterId);
+      if (!chapter || !chapter.content || !chapter.consistencyAnalysis) return;
+
+      setState(prev => {
+          const newChapters = [...prev.chapters];
+          const idx = newChapters.findIndex(c => c.id === chapterId);
+          if (idx !== -1) newChapters[idx] = { ...newChapters[idx], isGenerating: true };
+          return { ...prev, chapters: newChapters };
+      });
+
+      try {
+          const newContent = await GeminiService.fixChapterConsistency(
+              chapter.content, 
+              state.characters, 
+              chapter.consistencyAnalysis, 
+              state.settings, 
+              handleUsageUpdate
+          );
+
+          setState(prev => {
+              const newChapters = [...prev.chapters];
+              const idx = newChapters.findIndex(c => c.id === chapterId);
+              if (idx !== -1) {
+                  newChapters[idx] = { 
+                      ...newChapters[idx], 
+                      content: newContent, 
+                      isGenerating: false,
+                      consistencyAnalysis: "Fixed (AI Applied)" 
+                  };
+              }
+              return { ...prev, chapters: newChapters };
+          });
+          
+          await performSave(state, true);
+
+      } catch (e: any) {
+          console.error(e);
+          alert("Fix failed: " + e.message);
+          setState(prev => {
+              const newChapters = [...prev.chapters];
+              const idx = newChapters.findIndex(c => c.id === chapterId);
+              if (idx !== -1) newChapters[idx] = { ...newChapters[idx], isGenerating: false };
+              return { ...prev, chapters: newChapters };
+          });
+      }
+  };
 
   const currentChapter = state.chapters.find(c => c.id === state.currentChapterId);
   const volumeGroups = groupChaptersByVolume(state.chapters);
@@ -767,7 +880,7 @@ const App: React.FC = () => {
                     settings={state.settings}
                     onSettingsChange={handleSettingsChange}
                     onSubmit={generateOutlineAndCharacters}
-                    onStop={handleStopGeneration} // Use generic stop
+                    onStop={handleStopGeneration} 
                     isLoading={state.status === 'generating_outline'}
                 />
             </main>
@@ -862,6 +975,16 @@ const App: React.FC = () => {
                                 <span>人物</span>
                             </button>
 
+                            <button onClick={() => setShowWorldBuilder(true)} className="flex flex-col items-center justify-center text-indigo-600 hover:text-indigo-800 text-[10px] font-medium py-2 rounded-lg transition-colors hover:bg-indigo-50">
+                                <Globe2 size={16} className="mb-1" />
+                                <span>世界</span>
+                            </button>
+
+                            <button onClick={() => setShowPlotPlanner(true)} className="flex flex-col items-center justify-center text-purple-600 hover:text-purple-800 text-[10px] font-medium py-2 rounded-lg transition-colors hover:bg-purple-50">
+                                <GitMerge size={16} className="mb-1 rotate-90" />
+                                <span>情节</span>
+                            </button>
+
                             <button onClick={handleConsistencyCheck} disabled={isCheckingConsistency} className="flex flex-col items-center justify-center text-orange-600 hover:text-orange-800 text-[10px] font-medium py-2 rounded-lg transition-colors hover:bg-orange-50">
                                 <FileSearch size={16} className={`mb-1 ${isCheckingConsistency ? 'animate-pulse' : ''}`} />
                                 <span>校验</span>
@@ -869,27 +992,16 @@ const App: React.FC = () => {
 
                             {/* Dynamic Generate/Stop Button */}
                             {state.chapters.some(c => c.isGenerating) ? (
-                                <button onClick={handleStopGeneration} className="flex flex-col items-center justify-center text-red-600 hover:text-red-800 text-[10px] font-medium py-2 rounded-lg transition-colors hover:bg-red-50 animate-pulse">
-                                    <StopCircle size={16} className="mb-1" />
-                                    <span>停止</span>
+                                <button onClick={handleStopGeneration} className="col-span-4 flex items-center justify-center space-x-2 text-red-600 hover:text-red-800 text-[10px] font-medium py-2 rounded-lg transition-colors hover:bg-red-50 animate-pulse bg-red-50 border border-red-100 mt-2">
+                                    <StopCircle size={14} />
+                                    <span>停止生成 (Stop)</span>
                                 </button>
                             ) : (
-                                <button onClick={handleAutoGenerate} className="flex flex-col items-center justify-center text-indigo-600 hover:text-indigo-800 text-[10px] font-medium py-2 rounded-lg transition-colors hover:bg-indigo-50">
-                                    <Sparkles size={16} className="mb-1" />
-                                    <span>生成</span>
+                                <button onClick={handleAutoGenerate} className="col-span-4 flex items-center justify-center space-x-2 text-indigo-600 hover:text-indigo-800 text-[10px] font-medium py-2 rounded-lg transition-colors hover:bg-indigo-50 bg-indigo-50 border border-indigo-100 mt-2">
+                                    <Sparkles size={14} />
+                                    <span>自动生成 (Auto Generate)</span>
                                 </button>
                             )}
-                            
-                            <button onClick={() => setShowExportMenu(!showExportMenu)} className="flex flex-col items-center justify-center text-gray-600 hover:text-indigo-600 text-[10px] font-medium py-2 rounded-lg transition-colors hover:bg-gray-100 relative">
-                                <Download size={16} className="mb-1" />
-                                <span>导出</span>
-                                {showExportMenu && (
-                                    <div className="absolute bottom-full right-0 w-32 mb-2 bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden z-50">
-                                        <div onClick={(e) => { e.stopPropagation(); handleExportText(); }} className="px-3 py-2 hover:bg-gray-50 flex items-center space-x-2 text-xs text-gray-700 cursor-pointer"><FileText size={14}/><span>Text (.txt)</span></div>
-                                        <div onClick={(e) => { e.stopPropagation(); handleExportPDF(); }} className="px-3 py-2 hover:bg-gray-50 flex items-center space-x-2 text-xs text-gray-700 border-t border-gray-100 cursor-pointer"><Printer size={14}/><span>PDF (.pdf)</span></div>
-                                    </div>
-                                )}
-                            </button>
                         </div>
                         
                          <div className="text-xs pt-2 border-t border-gray-200 flex flex-col space-y-2">
@@ -938,10 +1050,36 @@ const App: React.FC = () => {
         onSettingsChange={handleSettingsChange}
         currentView={currentView}
         onNavigate={setCurrentView}
+        onImport={() => setShowImporter(true)} // Pass trigger
       />
       <div className="flex-1 flex flex-col h-full relative overflow-hidden">
         {mainContent}
-        <CharacterList characters={state.characters} isOpen={showCharacterModal} onClose={() => setShowCharacterModal(false)} onUpdateCharacters={handleUpdateCharacters} settings={state.settings} />
+        <CharacterList 
+            characters={state.characters} 
+            chapters={state.chapters} // Pass chapters for timeline visualization
+            isOpen={showCharacterModal} 
+            onClose={() => setShowCharacterModal(false)} 
+            onUpdateCharacters={handleUpdateCharacters} 
+            settings={state.settings} 
+        />
+        <WorldBuilder 
+            isOpen={showWorldBuilder} 
+            onClose={() => setShowWorldBuilder(false)} 
+            settings={state.settings} 
+            onUpdateWorld={handleUpdateWorld} 
+        />
+        <PlotPlanner 
+            isOpen={showPlotPlanner}
+            onClose={() => setShowPlotPlanner(false)}
+            settings={state.settings}
+            onUpdatePlot={handleUpdatePlot}
+        />
+        <Importer 
+            isOpen={showImporter}
+            onClose={() => setShowImporter(false)}
+            baseSettings={state.settings}
+            onImport={handleImport}
+        />
         <ConsistencyReport chapters={state.chapters} isOpen={showConsistencyReport} onClose={() => setShowConsistencyReport(false)} onFixConsistency={handleFixConsistency} />
       </div>
     </div>
