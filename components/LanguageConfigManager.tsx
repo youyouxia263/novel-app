@@ -26,7 +26,7 @@ const LanguageConfigManager: React.FC<LanguageConfigManagerProps> = ({ settings,
                         中英文配置 (Language Settings)
                     </h2>
                     <p className="text-gray-500 text-sm mt-1">
-                        Configure output language and interface preferences.
+                        配置输出语言和界面偏好。
                     </p>
                 </header>
 
@@ -53,7 +53,7 @@ const LanguageConfigManager: React.FC<LanguageConfigManagerProps> = ({ settings,
                                     </div>
                                     <div className="text-left">
                                         <div className="font-bold text-gray-800">中文 (Chinese)</div>
-                                        <div className="text-xs text-gray-500">Generate content in Simplified Chinese</div>
+                                        <div className="text-xs text-gray-500">生成简体中文内容</div>
                                     </div>
                                 </div>
                                 {settings.language === 'zh' && <Check className="text-indigo-600" />}
@@ -94,14 +94,14 @@ const LanguageConfigManager: React.FC<LanguageConfigManagerProps> = ({ settings,
                          </h3>
                          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
                              <p className="text-sm text-gray-500 mb-2">
-                                Current Interface: <span className="font-semibold text-gray-700">English / Chinese (Hybrid)</span>
+                                当前界面: <span className="font-semibold text-gray-700">简体中文</span>
                              </p>
                              <div className="flex gap-3">
                                  <button className="px-3 py-1 bg-white border border-gray-300 rounded text-sm text-gray-400">English</button>
                                  <button className="px-3 py-1 bg-white border border-gray-300 rounded text-sm text-gray-400">中文</button>
                              </div>
                              <p className="text-xs text-orange-500 mt-2">
-                                * Interface language switching is currently under development.
+                                * 界面语言切换功能开发中。
                              </p>
                          </div>
                     </section>

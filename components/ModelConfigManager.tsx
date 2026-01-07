@@ -44,7 +44,7 @@ const ModelConfigManager: React.FC<ModelConfigManagerProps> = ({ settings, onSet
     };
 
     const handleCreate = () => {
-        setEditingConfig({ ...emptyConfig, name: 'New Configuration' });
+        setEditingConfig({ ...emptyConfig, name: '新建配置' });
         setViewMode('edit');
     };
 
@@ -54,7 +54,7 @@ const ModelConfigManager: React.FC<ModelConfigManagerProps> = ({ settings, onSet
     };
 
     const handleDelete = async (id: string) => {
-        if (!window.confirm("确定要删除此配置吗？(Delete this config?)")) return;
+        if (!window.confirm("确定要删除此配置吗？")) return;
         const dao = DAOFactory.getDAO(settings);
         await dao.deleteModelConfig(id);
         await loadConfigs();
@@ -62,7 +62,7 @@ const ModelConfigManager: React.FC<ModelConfigManagerProps> = ({ settings, onSet
 
     const handleSave = async () => {
         if (!editingConfig.name) {
-            alert("请输入配置名称 (Please enter a name)");
+            alert("请输入配置名称");
             return;
         }
         const dao = DAOFactory.getDAO(settings);
@@ -107,7 +107,7 @@ const ModelConfigManager: React.FC<ModelConfigManagerProps> = ({ settings, onSet
                     <div className="flex justify-between items-center mb-6 pb-4 border-b border-gray-100">
                         <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
                             <Cpu className="text-indigo-600" />
-                            {editingConfig.id ? '编辑模型配置 (Edit Config)' : '新建模型配置 (New Config)'}
+                            {editingConfig.id ? '编辑模型配置' : '新建模型配置'}
                         </h2>
                         <button onClick={() => setViewMode('list')} className="text-gray-500 hover:text-gray-800">
                             <X size={24} />
@@ -116,7 +116,7 @@ const ModelConfigManager: React.FC<ModelConfigManagerProps> = ({ settings, onSet
 
                     <div className="space-y-5">
                          <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-1">配置名称 (Name)</label>
+                            <label className="block text-sm font-semibold text-gray-700 mb-1">配置名称</label>
                             <input 
                                 type="text" 
                                 value={editingConfig.name}
@@ -127,7 +127,7 @@ const ModelConfigManager: React.FC<ModelConfigManagerProps> = ({ settings, onSet
                          </div>
 
                          <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-1">供应商 (Provider)</label>
+                            <label className="block text-sm font-semibold text-gray-700 mb-1">供应商</label>
                             <div className="relative">
                                 <select
                                     value={editingConfig.provider}
@@ -192,7 +192,7 @@ const ModelConfigManager: React.FC<ModelConfigManagerProps> = ({ settings, onSet
                          </div>
 
                          <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-1">Max Output Tokens (Optional)</label>
+                            <label className="block text-sm font-semibold text-gray-700 mb-1">Max Output Tokens (可选)</label>
                             <div className="relative">
                                 <input 
                                     type="number" 
@@ -200,7 +200,7 @@ const ModelConfigManager: React.FC<ModelConfigManagerProps> = ({ settings, onSet
                                     step="100"
                                     value={editingConfig.maxOutputTokens || ''}
                                     onChange={(e) => handleEditChange('maxOutputTokens', e.target.value ? parseInt(e.target.value) : undefined)}
-                                    placeholder="Default"
+                                    placeholder="默认"
                                     className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
                                 />
                                 <Gauge size={18} className="absolute left-3 top-2.5 text-gray-500 pointer-events-none" />
@@ -208,10 +208,10 @@ const ModelConfigManager: React.FC<ModelConfigManagerProps> = ({ settings, onSet
                          </div>
 
                          <div className="flex pt-6 space-x-3">
-                             <button onClick={() => setViewMode('list')} className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors font-medium">取消 (Cancel)</button>
+                             <button onClick={() => setViewMode('list')} className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors font-medium">取消</button>
                              <button onClick={handleSave} className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors font-medium flex items-center justify-center gap-2">
                                  <Save size={18} />
-                                 <span>保存配置 (Save Config)</span>
+                                 <span>保存配置</span>
                              </button>
                          </div>
                     </div>
@@ -227,16 +227,16 @@ const ModelConfigManager: React.FC<ModelConfigManagerProps> = ({ settings, onSet
                     <div>
                         <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
                             <Cpu className="text-indigo-600" />
-                            模型配置管理 (Model Configurations)
+                            模型配置管理
                         </h2>
-                        <p className="text-gray-500 text-sm mt-1">Manage your AI providers and model parameters</p>
+                        <p className="text-gray-500 text-sm mt-1">管理您的 AI 供应商和模型参数</p>
                     </div>
                     <button 
                         onClick={handleCreate}
                         className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all shadow-sm hover:shadow-md"
                     >
                         <Plus size={18} />
-                        <span>新建配置 (Add New)</span>
+                        <span>新建配置</span>
                     </button>
                 </div>
 
@@ -244,8 +244,8 @@ const ModelConfigManager: React.FC<ModelConfigManagerProps> = ({ settings, onSet
                     <div className="text-center py-20 bg-white rounded-xl border border-dashed border-gray-300">
                         <Bot size={48} className="mx-auto text-gray-300 mb-4" />
                         <h3 className="text-gray-500 font-medium">暂无保存的配置</h3>
-                        <p className="text-gray-400 text-sm mb-6">Create a configuration to switch between different AI models easily.</p>
-                        <button onClick={handleCreate} className="text-indigo-600 hover:text-indigo-800 font-medium text-sm">Create Now &rarr;</button>
+                        <p className="text-gray-400 text-sm mb-6">创建一个配置以轻松切换不同的 AI 模型。</p>
+                        <button onClick={handleCreate} className="text-indigo-600 hover:text-indigo-800 font-medium text-sm">立即创建 &rarr;</button>
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -266,13 +266,13 @@ const ModelConfigManager: React.FC<ModelConfigManagerProps> = ({ settings, onSet
                                             </div>
                                             {active && (
                                                 <span className="bg-indigo-100 text-indigo-700 text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1">
-                                                    <CheckCircle2 size={10} /> Active
+                                                    <CheckCircle2 size={10} /> 启用中
                                                 </span>
                                             )}
                                         </div>
                                         
                                         <div className="space-y-2 text-xs text-gray-600 mt-4">
-                                            <div className="flex items-center gap-2" title="Model Name">
+                                            <div className="flex items-center gap-2" title="模型名称">
                                                 <Server size={14} className="text-gray-400" />
                                                 <span className="truncate font-mono bg-gray-50 px-1.5 py-0.5 rounded">{config.modelName}</span>
                                             </div>
@@ -287,10 +287,10 @@ const ModelConfigManager: React.FC<ModelConfigManagerProps> = ({ settings, onSet
 
                                     <div className="border-t border-gray-100 p-3 bg-gray-50/50 rounded-b-xl flex justify-between items-center">
                                         <div className="flex gap-1">
-                                            <button onClick={() => handleEdit(config)} className="p-1.5 text-gray-500 hover:text-indigo-600 hover:bg-white rounded transition-colors" title="Edit">
+                                            <button onClick={() => handleEdit(config)} className="p-1.5 text-gray-500 hover:text-indigo-600 hover:bg-white rounded transition-colors" title="编辑">
                                                 <Edit2 size={16} />
                                             </button>
-                                            <button onClick={() => handleDelete(config.id)} className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-white rounded transition-colors" title="Delete">
+                                            <button onClick={() => handleDelete(config.id)} className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-white rounded transition-colors" title="删除">
                                                 <Trash2 size={16} />
                                             </button>
                                         </div>
@@ -304,7 +304,7 @@ const ModelConfigManager: React.FC<ModelConfigManagerProps> = ({ settings, onSet
                                             }`}
                                         >
                                             <Play size={14} className={active ? '' : 'fill-current'} />
-                                            <span>{active ? '已启用 (Active)' : '启用 (Activate)'}</span>
+                                            <span>{active ? '已启用' : '启用'}</span>
                                         </button>
                                     </div>
                                 </div>

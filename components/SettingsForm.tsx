@@ -235,8 +235,8 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ settings, onSettingsChange,
           <BookOpen className="w-6 h-6 text-indigo-600" />
         </div>
         <div>
-          <h2 className="text-xl font-bold text-gray-900">开始创作 (Start Your Novel)</h2>
-          <p className="text-sm text-gray-500">根据番茄小说分类体系定义作品 (Define novel based on Tomato Novel standard)</p>
+          <h2 className="text-xl font-bold text-gray-900">开始创作</h2>
+          <p className="text-sm text-gray-500">基于番茄小说标准定义作品 (Define novel based on Tomato Novel standard)</p>
         </div>
       </div>
 
@@ -245,7 +245,7 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ settings, onSettingsChange,
         {/* Basic Info */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">小说标题 (Title)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">小说标题</label>
                 <div className="flex gap-2">
                     <input
                         type="text"
@@ -299,7 +299,7 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ settings, onSettingsChange,
         <div className="border rounded-xl p-5 bg-gray-50 space-y-6">
             <div className="flex items-center gap-2 mb-2">
                 <Tag size={18} className="text-indigo-600"/>
-                <h3 className="font-bold text-gray-800">作品分类 (Classification)</h3>
+                <h3 className="font-bold text-gray-800">作品分类</h3>
             </div>
             
             {/* 1. Main Category */}
@@ -311,13 +311,13 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ settings, onSettingsChange,
                             onClick={() => setCategoryTab('male')}
                             className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${categoryTab === 'male' ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:text-gray-700'}`}
                         >
-                            男频 (Male)
+                            男频
                         </button>
                         <button 
                             onClick={() => setCategoryTab('female')}
                             className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${categoryTab === 'female' ? 'bg-pink-100 text-pink-700' : 'text-gray-500 hover:text-gray-700'}`}
                         >
-                            女频 (Female)
+                            女频
                         </button>
                     </div>
                 </div>
@@ -423,7 +423,7 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ settings, onSettingsChange,
             <div className="flex justify-between items-center">
                  <div className="flex items-center space-x-2 text-sm font-medium text-gray-800">
                     {settings.themes.includes("系统") ? <Dna size={18} className="text-purple-600"/> : <Globe2 size={18} className="text-gray-600"/>}
-                    <span>{settings.themes.includes("系统") ? "系统规则 (System Rules)" : "世界观设定 (World Setting)"}</span>
+                    <span>{settings.themes.includes("系统") ? "系统规则" : "世界观设定"}</span>
                  </div>
                  
                  <div className="flex space-x-2">
@@ -433,7 +433,7 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ settings, onSettingsChange,
                         className="text-xs flex items-center space-x-1 text-purple-600 hover:text-purple-800 bg-white border border-purple-100 px-3 py-1 rounded-full transition-colors disabled:opacity-50"
                      >
                         {isGeneratingWorld ? <Loader2 className="w-3 h-3 animate-spin" /> : <Wand2 className="w-3 h-3" />}
-                        <span>生成 (Generate)</span>
+                        <span>生成</span>
                      </button>
                      <button
                         onClick={handleAiExpandWorld}
@@ -441,7 +441,7 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ settings, onSettingsChange,
                         className="text-xs flex items-center space-x-1 text-indigo-600 hover:text-indigo-800 bg-white border border-indigo-100 px-3 py-1 rounded-full transition-colors disabled:opacity-50"
                      >
                         {isExpandingWorld ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
-                        <span>AI 扩写 (Expand)</span>
+                        <span>AI 扩写</span>
                      </button>
                  </div>
             </div>
@@ -462,7 +462,7 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ settings, onSettingsChange,
              <div className="flex justify-between items-center">
                  <div className="flex items-center space-x-2 text-blue-800 font-medium">
                     <Users size={18} />
-                    <span>主要角色 (Characters)</span>
+                    <span>主要角色</span>
                  </div>
                  <div className="flex space-x-2">
                      <button
@@ -471,7 +471,7 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ settings, onSettingsChange,
                         className="text-xs flex items-center space-x-1 text-blue-600 hover:text-blue-800 bg-white border border-blue-100 px-3 py-1 rounded-full transition-colors disabled:opacity-50"
                      >
                         {isGeneratingCharacters ? <Loader2 className="w-3 h-3 animate-spin" /> : <Wand2 className="w-3 h-3" />}
-                        <span>生成 (Generate)</span>
+                        <span>生成</span>
                      </button>
                      <button
                         onClick={handleAiExpandCharacters}
@@ -479,12 +479,12 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ settings, onSettingsChange,
                         className="text-xs flex items-center space-x-1 text-indigo-600 hover:text-indigo-800 bg-white border border-indigo-100 px-3 py-1 rounded-full transition-colors disabled:opacity-50"
                      >
                         {isExpandingCharacters ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
-                        <span>AI 扩写 (Expand)</span>
+                        <span>AI 扩写</span>
                      </button>
                  </div>
              </div>
              <p className="text-xs text-blue-600/80">
-                 Pre-define characters here, or leave empty to auto-generate.
+                 在此预设角色，或留空让 AI 自动生成。
              </p>
              <textarea
                 value={settings.mainCharacters || ''}
@@ -504,7 +504,7 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ settings, onSettingsChange,
                     className="text-xs flex items-center space-x-1 text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-2 py-1 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     {isGeneratingPremise ? <Loader2 className="w-3 h-3 animate-spin" /> : <Wand2 className="w-3 h-3" />}
-                    <span>生成 (Generate)</span>
+                    <span>生成</span>
                 </button>
                 <button
                     onClick={handleAiExpandPremise}
@@ -512,7 +512,7 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ settings, onSettingsChange,
                     className="text-xs flex items-center space-x-1 text-purple-600 hover:text-purple-800 bg-purple-50 hover:bg-purple-100 px-2 py-1 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     {isExpandingPremise ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
-                    <span>AI 扩写 (Expand)</span>
+                    <span>AI 扩写</span>
                 </button>
             </div>
           </div>
@@ -528,88 +528,88 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ settings, onSettingsChange,
         <div className="p-4 bg-orange-50 rounded-lg border border-orange-100 space-y-4">
              <div className="flex items-center space-x-2 text-orange-800 font-medium">
                 <Feather size={18} />
-                <span>写作风格 (Writing Style)</span>
+                <span>写作风格</span>
              </div>
              
              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1 flex items-center gap-1">
-                    <Mic2 size={12}/> Tone (基调)
+                    <Mic2 size={12}/> 基调 (Tone)
                   </label>
                   <select
                     value={settings.writingTone}
                     onChange={(e) => handleChange('writingTone', e.target.value as WritingTone)}
                     className="w-full px-3 py-2 text-sm border border-orange-200 rounded-md focus:ring-1 focus:ring-orange-400 outline-none bg-white"
                   >
-                    <option value="Neutral">中性 (Neutral)</option>
-                    <option value="Suspenseful">悬疑/紧张 (Suspenseful)</option>
-                    <option value="Dark">暗黑/压抑 (Dark)</option>
-                    <option value="Humorous">幽默 (Humorous)</option>
-                    <option value="Witty">机智 (Witty)</option>
-                    <option value="Melancholic">忧伤 (Melancholic)</option>
-                    <option value="Fast-paced">快节奏 (Fast-paced)</option>
-                    <option value="Romantic">浪漫 (Romantic)</option>
-                    <option value="Cynical">愤世嫉俗 (Cynical)</option>
-                    <option value="Inspirational">励志 (Inspirational)</option>
-                    <option value="Serious">严肃 (Serious)</option>
-                    <option value="Whimsical">异想天开 (Whimsical)</option>
-                    <option value="Dramatic">戏剧性 (Dramatic)</option>
+                    <option value="Neutral">中性</option>
+                    <option value="Suspenseful">悬疑/紧张</option>
+                    <option value="Dark">暗黑/压抑</option>
+                    <option value="Humorous">幽默</option>
+                    <option value="Witty">机智</option>
+                    <option value="Melancholic">忧伤</option>
+                    <option value="Fast-paced">快节奏</option>
+                    <option value="Romantic">浪漫</option>
+                    <option value="Cynical">愤世嫉俗</option>
+                    <option value="Inspirational">励志</option>
+                    <option value="Serious">严肃</option>
+                    <option value="Whimsical">异想天开</option>
+                    <option value="Dramatic">戏剧性</option>
                   </select>
                 </div>
 
                 <div>
                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1 flex items-center gap-1">
-                      <Feather size={12}/> Complexity (文笔)
+                      <Feather size={12}/> 文笔 (Complexity)
                    </label>
                    <select
                     value={settings.writingStyle}
                     onChange={(e) => handleChange('writingStyle', e.target.value as WritingStyle)}
                     className="w-full px-3 py-2 text-sm border border-orange-200 rounded-md focus:ring-1 focus:ring-orange-400 outline-none bg-white"
                    >
-                     <option value="Simple">通俗易懂 (Simple)</option>
-                     <option value="Moderate">标准 (Moderate)</option>
-                     <option value="Complex">辞藻华丽 (Complex)</option>
-                     <option value="Poetic">诗意 (Poetic)</option>
-                     <option value="Minimalist">极简主义 (Minimalist)</option>
-                     <option value="Descriptive">注重描写 (Descriptive)</option>
-                     <option value="Colloquial">口语化 (Colloquial)</option>
-                     <option value="Academic">学术/严谨 (Academic)</option>
+                     <option value="Simple">通俗易懂</option>
+                     <option value="Moderate">标准</option>
+                     <option value="Complex">辞藻华丽</option>
+                     <option value="Poetic">诗意</option>
+                     <option value="Minimalist">极简主义</option>
+                     <option value="Descriptive">注重描写</option>
+                     <option value="Colloquial">口语化</option>
+                     <option value="Academic">学术/严谨</option>
                    </select>
                 </div>
 
                 <div>
                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1 flex items-center gap-1">
-                      <Gauge size={12}/> Pacing (节奏)
+                      <Gauge size={12}/> 节奏 (Pacing)
                    </label>
                    <select
                     value={settings.pacing || 'Moderate'}
                     onChange={(e) => handleChange('pacing', e.target.value as NarrativePacing)}
                     className="w-full px-3 py-2 text-sm border border-orange-200 rounded-md focus:ring-1 focus:ring-orange-400 outline-none bg-white"
                    >
-                     <option value="Fast">快节奏 (Fast-paced)</option>
-                     <option value="Moderate">中等 (Moderate)</option>
-                     <option value="Slow">慢节奏 (Slow-paced)</option>
+                     <option value="Fast">快节奏</option>
+                     <option value="Moderate">中等</option>
+                     <option value="Slow">慢节奏</option>
                    </select>
                 </div>
 
                 <div>
                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1 flex items-center gap-1">
-                      <Palette size={12}/> Rhetoric (文采)
+                      <Palette size={12}/> 文采 (Rhetoric)
                    </label>
                    <select
                     value={settings.rhetoricLevel || 'Moderate'}
                     onChange={(e) => handleChange('rhetoricLevel', e.target.value as RhetoricLevel)}
                     className="w-full px-3 py-2 text-sm border border-orange-200 rounded-md focus:ring-1 focus:ring-orange-400 outline-none bg-white"
                    >
-                     <option value="Plain">平实 (Plain)</option>
-                     <option value="Moderate">适中 (Balanced)</option>
-                     <option value="Rich">华丽/丰富 (Rich)</option>
+                     <option value="Plain">平实</option>
+                     <option value="Moderate">适中</option>
+                     <option value="Rich">华丽/丰富</option>
                    </select>
                 </div>
 
                 <div>
                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1 flex items-center gap-1">
-                      <Eye size={12}/> Perspective (视角)
+                      <Eye size={12}/> 视角 (Perspective)
                    </label>
                    <select
                     value={settings.narrativePerspective}
@@ -627,7 +627,7 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ settings, onSettingsChange,
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
            <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">作品篇幅 (Format)</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">作品篇幅</label>
             <div className="grid grid-cols-2 gap-4">
                 <button
                     onClick={() => handleNovelTypeChange('long')}
@@ -663,7 +663,7 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ settings, onSettingsChange,
           
            <div className="grid grid-cols-2 gap-4">
              <div>
-                 <label className="block text-sm font-medium text-gray-700 mb-1">章节数量 (Chapters)</label>
+                 <label className="block text-sm font-medium text-gray-700 mb-1">章节数量</label>
                  <input
                   type="number"
                   min={1}
@@ -680,7 +680,7 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ settings, onSettingsChange,
              </div>
              
              <div>
-                 <label className="block text-sm font-medium text-gray-700 mb-1">单章字数 (Words/Ch)</label>
+                 <label className="block text-sm font-medium text-gray-700 mb-1">单章目标字数</label>
                  <input
                   type="number"
                   min={100}
@@ -704,7 +704,7 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ settings, onSettingsChange,
                     className="w-full flex items-center justify-center space-x-2 py-3 rounded-lg text-white font-medium transition-all bg-red-500 hover:bg-red-600 shadow-md hover:shadow-lg animate-pulse"
                 >
                     <Square className="w-5 h-5 fill-current" />
-                    <span>停止生成 (Stop)</span>
+                    <span>停止生成</span>
                 </button>
             ) : (
                 <button

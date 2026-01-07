@@ -15,7 +15,7 @@ const PREVIEW_LABELS: Record<string, { label: string, icon: any }> = {
     [PROMPT_KEYS.GENERATE_CHAPTER]: { label: '生成章节 (Chapter)', icon: FileText },
     [PROMPT_KEYS.GENERATE_CHARACTERS]: { label: '批量生成角色 (Batch Characters)', icon: Users },
     [PROMPT_KEYS.GENERATE_SINGLE_CHARACTER]: { label: '单个角色生成 (Single Character)', icon: Users },
-    [PROMPT_KEYS.GENERATE_WORLD]: { label: '世界观生成 (World Setting)', icon: Globe2 },
+    [PROMPT_KEYS.GENERATE_WORLD_SETTING]: { label: '世界观生成 (World Setting)', icon: Globe2 },
     [PROMPT_KEYS.GENERATE_PREMISE]: { label: '概要生成 (Premise)', icon: Sparkles },
     [PROMPT_KEYS.EXPAND_TEXT]: { label: 'AI 扩写 (Expand Text)', icon: Edit3 },
     [PROMPT_KEYS.CHECK_CONSISTENCY]: { label: '一致性检查 (Check Consistency)', icon: CheckCircle2 },
@@ -31,7 +31,7 @@ const PromptConfigManager: React.FC<PromptConfigManagerProps> = ({ settings, onS
 
     const handleSelect = (key: string) => {
         if (isDirty) {
-            if (!window.confirm("Changes not saved. Discard?")) return;
+            if (!window.confirm("更改未保存。确定丢弃吗？")) return;
         }
         setSelectedKey(key);
         setEditValue(settings.customPrompts?.[key] || DEFAULT_PROMPTS[key]);
@@ -60,11 +60,11 @@ const PromptConfigManager: React.FC<PromptConfigManagerProps> = ({ settings, onS
         await dao.saveNovel({ settings: newSettings } as any); // Partial save just for prompts
 
         setIsDirty(false);
-        alert("Prompt configuration saved.");
+        alert("提示词配置已保存。");
     };
 
     const handleReset = () => {
-        if (!window.confirm("Reset to default system prompt?")) return;
+        if (!window.confirm("确定重置为默认提示词吗？")) return;
         
         const newCustomPrompts = { ...settings.customPrompts };
         delete newCustomPrompts[selectedKey];
@@ -88,7 +88,7 @@ const PromptConfigManager: React.FC<PromptConfigManagerProps> = ({ settings, onS
                     提示词配置 (Prompt Configuration)
                 </h2>
                 <p className="text-sm text-gray-500 mt-1">
-                    Customize the internal prompts used by the AI. Use <code>{`{{variable}}`}</code> placeholders.
+                    自定义 AI 使用的内部提示词。使用 <code>{`{{variable}}`}</code> 作为占位符。
                 </p>
             </header>
             
@@ -113,7 +113,7 @@ const PromptConfigManager: React.FC<PromptConfigManagerProps> = ({ settings, onS
                                     <div className="text-xs font-semibold truncate">{info.label}</div>
                                     <div className="text-[10px] text-gray-400 truncate">{key}</div>
                                 </div>
-                                {isModified && <div className="w-1.5 h-1.5 rounded-full bg-orange-400" title="Modified" />}
+                                {isModified && <div className="w-1.5 h-1.5 rounded-full bg-orange-400" title="已修改" />}
                             </button>
                         );
                     })}
@@ -126,7 +126,7 @@ const PromptConfigManager: React.FC<PromptConfigManagerProps> = ({ settings, onS
                             <span className="text-sm font-bold text-gray-700">{PREVIEW_LABELS[selectedKey].label}</span>
                             {settings.customPrompts?.[selectedKey] && (
                                 <span className="bg-orange-100 text-orange-700 text-xs px-2 py-0.5 rounded-full border border-orange-200">
-                                    Modified
+                                    已修改
                                 </span>
                             )}
                         </div>
@@ -137,7 +137,7 @@ const PromptConfigManager: React.FC<PromptConfigManagerProps> = ({ settings, onS
                                 className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-gray-600 bg-white border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50"
                             >
                                 <RotateCcw size={14} />
-                                <span>Reset to Default</span>
+                                <span>重置默认</span>
                             </button>
                             <button 
                                 onClick={handleSave}
@@ -145,7 +145,7 @@ const PromptConfigManager: React.FC<PromptConfigManagerProps> = ({ settings, onS
                                 className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-indigo-600 rounded hover:bg-indigo-700 disabled:opacity-50 disabled:bg-gray-400"
                             >
                                 <Save size={14} />
-                                <span>Save Changes</span>
+                                <span>保存更改</span>
                             </button>
                         </div>
                     </div>
@@ -158,7 +158,7 @@ const PromptConfigManager: React.FC<PromptConfigManagerProps> = ({ settings, onS
                     />
                     
                     <div className="mt-4 p-3 bg-blue-50 text-blue-800 text-xs rounded-lg border border-blue-100">
-                        <strong>Available Placeholders:</strong> {`{{title}}`}, {`{{genre}}`}, {`{{language}}`}, {`{{premise}}`}... (Dependent on prompt type)
+                        <strong>可用占位符:</strong> {`{{title}}`}, {`{{genre}}`}, {`{{language}}`}, {`{{premise}}`}... (取决于具体的提示词类型)
                     </div>
                 </div>
             </div>

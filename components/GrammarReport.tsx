@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { GrammarIssue } from '../types';
 import { X, SpellCheck, Wand2, Loader2, CheckCircle } from 'lucide-react';
@@ -19,7 +20,7 @@ const GrammarReport: React.FC<GrammarReportProps> = ({ isOpen, onClose, issues, 
         <div className="flex items-center justify-between p-5 border-b border-gray-100">
           <div className="flex items-center space-x-2 text-indigo-600">
             <SpellCheck className="w-5 h-5" />
-            <h3 className="text-lg font-bold">语法与拼写检查 (Grammar Check)</h3>
+            <h3 className="text-lg font-bold">语法与拼写检查</h3>
           </div>
           <button 
             onClick={onClose}
@@ -35,7 +36,7 @@ const GrammarReport: React.FC<GrammarReportProps> = ({ isOpen, onClose, issues, 
            <div className="p-4 bg-white rounded-lg border border-gray-200 flex justify-between items-center shadow-sm">
                 <div>
                    <h4 className="font-bold text-gray-800">发现 {issues.length} 个潜在问题</h4>
-                   <p className="text-xs text-gray-500 mt-1">Review suggestions below or use Auto-Fix.</p>
+                   <p className="text-xs text-gray-500 mt-1">查看以下建议或使用一键修复。</p>
                 </div>
                 <button
                     onClick={onAutoFix}
@@ -43,7 +44,7 @@ const GrammarReport: React.FC<GrammarReportProps> = ({ isOpen, onClose, issues, 
                     className="flex items-center space-x-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     {isFixing ? <Loader2 size={16} className="animate-spin" /> : <Wand2 size={16} />}
-                    <span>一键修复 (Auto Fix)</span>
+                    <span>一键修复</span>
                 </button>
            </div>
 
@@ -51,7 +52,7 @@ const GrammarReport: React.FC<GrammarReportProps> = ({ isOpen, onClose, issues, 
              <div className="flex flex-col items-center justify-center py-10 text-gray-400">
                 <CheckCircle size={48} className="text-green-500 mb-3 opacity-50" />
                 <p>未发现明显的语法错误。</p>
-                <p className="text-sm">Great job! No issues found.</p>
+                <p className="text-sm">太棒了！未发现问题。</p>
              </div>
            )}
 
@@ -68,7 +69,7 @@ const GrammarReport: React.FC<GrammarReportProps> = ({ isOpen, onClose, issues, 
                                {issue.suggestion}
                            </div>
                            <div className="text-xs text-gray-500 italic border-t border-gray-50 pt-2 mt-1">
-                               Explanation: {issue.explanation}
+                               说明: {issue.explanation}
                            </div>
                        </div>
                    </div>

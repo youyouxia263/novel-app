@@ -185,6 +185,8 @@ export interface Character {
   psychology?: string;
   goals?: string;
   
+  storylineId?: string; // Link to a specific plot thread
+  
   // Detailed Fields
   personalityTags?: PersonalityTraits;
   backgroundStory?: string;

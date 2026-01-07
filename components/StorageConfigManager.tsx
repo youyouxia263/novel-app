@@ -30,10 +30,10 @@ const StorageConfigManager: React.FC<StorageConfigManagerProps> = ({ settings, o
             const dao = DAOFactory.getDAO(settings);
             await dao.init(); // Try to init to test
             
-            setSaveMessage('设置已应用 (Settings Applied)');
+            setSaveMessage('设置已应用');
             setTimeout(() => setSaveMessage(''), 3000);
         } catch (e: any) {
-            setSaveMessage('Error: ' + e.message);
+            setSaveMessage('错误: ' + e.message);
         } finally {
             setIsSaving(false);
         }
@@ -45,10 +45,10 @@ const StorageConfigManager: React.FC<StorageConfigManagerProps> = ({ settings, o
                 <header className="mb-8">
                     <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
                         <Database className="text-indigo-600" />
-                        持久化存储配置 (Persistence Config)
+                        持久化存储配置
                     </h2>
                     <p className="text-gray-500 text-sm mt-1">
-                        Configure where your novels and chapters are stored.
+                        配置小说和章节数据的存储位置。
                     </p>
                 </header>
 
@@ -77,7 +77,7 @@ const StorageConfigManager: React.FC<StorageConfigManagerProps> = ({ settings, o
                                         <span>本地数据库 (SQLite)</span>
                                     </div>
                                     <p className="text-xs text-gray-500 mt-1">
-                                        Use a local SQLite database file. Requires backend adapter or local file access setup.
+                                        使用本地 SQLite 数据库文件。Web 版本使用浏览器 IndexedDB 模拟。
                                     </p>
                                 </div>
                             </label>
@@ -101,7 +101,7 @@ const StorageConfigManager: React.FC<StorageConfigManagerProps> = ({ settings, o
                                         <span>远程数据库 (Remote MySQL)</span>
                                     </div>
                                     <p className="text-xs text-gray-500 mt-1">
-                                        Connect to a remote MySQL server via API. Requires backend setup.
+                                        通过 API 连接远程 MySQL 服务器。需要后端支持。
                                     </p>
                                 </div>
                             </label>
@@ -112,10 +112,10 @@ const StorageConfigManager: React.FC<StorageConfigManagerProps> = ({ settings, o
                     {settings.storage.type === 'sqlite' && (
                          <div className="pt-4 border-t border-gray-100 animate-in fade-in slide-in-from-top-2">
                              <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
-                                <HardDrive size={16} /> SQLite Configuration
+                                <HardDrive size={16} /> SQLite 配置
                              </h3>
                              <div>
-                                 <label className="block text-xs font-semibold text-gray-500 mb-1">Database File Path (Local)</label>
+                                 <label className="block text-xs font-semibold text-gray-500 mb-1">数据库文件路径 (本地)</label>
                                  <div className="relative">
                                     <input 
                                         type="text" 
@@ -127,7 +127,7 @@ const StorageConfigManager: React.FC<StorageConfigManagerProps> = ({ settings, o
                                     <FolderOpen size={18} className="absolute right-3 top-2.5 text-gray-400" />
                                  </div>
                                  <p className="text-[10px] text-gray-400 mt-1">
-                                    * Current web version simulates SQLite using IndexedDB for browser compatibility. Native SQLite requires a backend service.
+                                    * 当前 Web 版本使用 IndexedDB 模拟 SQLite 以兼容浏览器环境。如需使用原生 SQLite 文件，请配置后端服务。
                                  </p>
                              </div>
                         </div>
@@ -137,7 +137,7 @@ const StorageConfigManager: React.FC<StorageConfigManagerProps> = ({ settings, o
                     {settings.storage.type === 'mysql' && (
                         <div className="pt-4 border-t border-gray-100 animate-in fade-in slide-in-from-top-2">
                              <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
-                                <Server size={16} /> Connection Details
+                                <Server size={16} /> 连接详情
                              </h3>
                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                  <div>
@@ -205,7 +205,7 @@ const StorageConfigManager: React.FC<StorageConfigManagerProps> = ({ settings, o
                             className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg flex items-center gap-2 font-medium transition-colors shadow-sm"
                          >
                             <Save size={18} />
-                            <span>应用配置 (Apply)</span>
+                            <span>应用配置</span>
                          </button>
                     </div>
 

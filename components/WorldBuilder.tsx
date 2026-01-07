@@ -95,24 +95,29 @@ const WorldBuilder: React.FC<WorldBuilderProps> = ({ isOpen, onClose, settings, 
 
     const renderFoundation = () => (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 h-full overflow-y-auto p-1">
-            {['geography', 'society', 'culture', 'technology'].map((cat) => (
-                <div key={cat} className="border rounded-lg p-4 bg-gray-50 flex flex-col">
+            {[
+                { key: 'geography', label: '地理环境 (Geography)' }, 
+                { key: 'society', label: '社会制度 (Society)' }, 
+                { key: 'culture', label: '文化背景 (Culture)' }, 
+                { key: 'technology', label: '科技/魔法 (Tech/Magic)' }
+            ].map((cat) => (
+                <div key={cat.key} className="border rounded-lg p-4 bg-gray-50 flex flex-col">
                     <div className="flex justify-between items-center mb-2">
-                        <h4 className="font-bold text-gray-700 capitalize">{cat}</h4>
+                        <h4 className="font-bold text-gray-700 capitalize">{cat.label}</h4>
                         <button 
-                            onClick={() => generateFoundation(cat as any)} 
+                            onClick={() => generateFoundation(cat.key as any)} 
                             disabled={!!isGenerating}
                             className="text-xs flex items-center gap-1 text-indigo-600 hover:text-indigo-800 disabled:opacity-50"
                         >
-                            {isGenerating === cat ? <Loader2 size={12} className="animate-spin"/> : <Sparkles size={12}/>}
-                            <span>Auto Gen</span>
+                            {isGenerating === cat.key ? <Loader2 size={12} className="animate-spin"/> : <Sparkles size={12}/>}
+                            <span>自动生成</span>
                         </button>
                     </div>
                     <textarea 
-                        value={(worldData as any)[cat]}
-                        onChange={(e) => handleUpdate(cat as any, e.target.value)}
+                        value={(worldData as any)[cat.key]}
+                        onChange={(e) => handleUpdate(cat.key as any, e.target.value)}
                         className="flex-1 w-full p-2 border border-gray-200 rounded text-sm resize-none focus:ring-1 focus:ring-indigo-500 outline-none"
-                        placeholder={`Describe ${cat}...`}
+                        placeholder={`描述${cat.label}...`}
                     />
                 </div>
             ))}
@@ -124,14 +129,14 @@ const WorldBuilder: React.FC<WorldBuilderProps> = ({ isOpen, onClose, settings, 
             <div className="flex justify-between items-center mb-4">
                 <button onClick={generateMap} disabled={!!isGenerating} className="px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded text-xs font-medium flex items-center gap-2">
                     {isGenerating === 'map' ? <Loader2 size={14} className="animate-spin"/> : <Sparkles size={14}/>}
-                    <span>Generate Locations</span>
+                    <span>生成地点</span>
                 </button>
-                <div className="text-xs text-gray-500">Drag/Edit capability limited in this version.</div>
+                <div className="text-xs text-gray-500">当前版本仅支持列表生成，交互式地图开发中。</div>
             </div>
             <div className="flex-1 border rounded-lg bg-slate-50 relative overflow-hidden">
                 <div className="absolute inset-0 p-4">
                     {worldData.locations.length === 0 ? (
-                        <div className="h-full flex items-center justify-center text-gray-400">No locations yet. Generate or add manually.</div>
+                        <div className="h-full flex items-center justify-center text-gray-400">暂无地点信息。</div>
                     ) : (
                         <svg width="100%" height="100%" viewBox="0 0 400 300">
                             {worldData.locations.map((loc, i) => (
@@ -167,11 +172,11 @@ const WorldBuilder: React.FC<WorldBuilderProps> = ({ isOpen, onClose, settings, 
              <div className="flex justify-between items-center mb-4">
                 <button onClick={generateTimeline} disabled={!!isGenerating} className="px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded text-xs font-medium flex items-center gap-2">
                     {isGenerating === 'timeline' ? <Loader2 size={14} className="animate-spin"/> : <Sparkles size={14}/>}
-                    <span>Generate History</span>
+                    <span>生成历史事件</span>
                 </button>
             </div>
             <div className="flex-1 overflow-y-auto space-y-4 pr-2">
-                {worldData.timeline.length === 0 && <div className="text-gray-400 text-center mt-10">No history events recorded.</div>}
+                {worldData.timeline.length === 0 && <div className="text-gray-400 text-center mt-10">暂无历史记录。</div>}
                 {worldData.timeline.map((event, i) => (
                     <div key={i} className="flex gap-4 group">
                         <div className="w-20 text-right font-mono text-sm font-bold text-indigo-600 pt-1">{event.year}</div>
@@ -196,14 +201,14 @@ const WorldBuilder: React.FC<WorldBuilderProps> = ({ isOpen, onClose, settings, 
             <div className="mb-4">
                 <button onClick={runAnalysis} disabled={!!isGenerating} className="w-full py-3 bg-orange-50 text-orange-700 hover:bg-orange-100 rounded-lg font-bold flex items-center justify-center gap-2 border border-orange-200">
                     {isGenerating === 'analysis' ? <Loader2 size={18} className="animate-spin"/> : <AlertTriangle size={18}/>}
-                    <span>Run World Consistency Check</span>
+                    <span>运行世界观一致性检查</span>
                 </button>
             </div>
             <div className="flex-1 overflow-y-auto bg-gray-50 p-4 rounded-lg border border-gray-200 prose prose-sm max-w-none">
                 {analysisReport ? (
                     <div dangerouslySetInnerHTML={{ __html: analysisReport.replace(/\n/g, '<br/>') }} /> // Simple render, reader handles markdown usually
                 ) : (
-                    <div className="text-gray-400 text-center mt-10">Run analysis to detect logical conflicts and missing elements in your world building.</div>
+                    <div className="text-gray-400 text-center mt-10">运行检查以发现世界观设定中的逻辑冲突或缺失元素。</div>
                 )}
             </div>
         </div>
@@ -213,19 +218,19 @@ const WorldBuilder: React.FC<WorldBuilderProps> = ({ isOpen, onClose, settings, 
         <div className="h-full flex flex-col">
             <div className="flex justify-end mb-2">
                 <button onClick={() => {
-                    const newTerm: WorldTerm = { id: crypto.randomUUID(), term: "New Term", definition: "...", category: "General" };
+                    const newTerm: WorldTerm = { id: crypto.randomUUID(), term: "新术语", definition: "...", category: "通用" };
                     handleUpdate('encyclopedia', [...worldData.encyclopedia, newTerm]);
                 }} className="text-xs flex items-center gap-1 text-indigo-600 bg-indigo-50 px-2 py-1 rounded">
-                    <Plus size={12}/> Add Term
+                    <Plus size={12}/> 添加词条
                 </button>
             </div>
             <div className="flex-1 overflow-y-auto">
                 <table className="w-full text-sm text-left">
                     <thead className="bg-gray-100 text-gray-600 uppercase text-xs">
                         <tr>
-                            <th className="px-3 py-2 rounded-tl-lg">Term</th>
-                            <th className="px-3 py-2">Category</th>
-                            <th className="px-3 py-2">Definition</th>
+                            <th className="px-3 py-2 rounded-tl-lg">术语 (Term)</th>
+                            <th className="px-3 py-2">分类 (Category)</th>
+                            <th className="px-3 py-2">定义 (Definition)</th>
                             <th className="px-3 py-2 rounded-tr-lg w-10"></th>
                         </tr>
                     </thead>
@@ -263,7 +268,7 @@ const WorldBuilder: React.FC<WorldBuilderProps> = ({ isOpen, onClose, settings, 
                         ))}
                     </tbody>
                 </table>
-                {worldData.encyclopedia.length === 0 && <div className="text-center text-gray-400 py-10">No terms added.</div>}
+                {worldData.encyclopedia.length === 0 && <div className="text-center text-gray-400 py-10">暂无词条。</div>}
             </div>
         </div>
     );
@@ -277,13 +282,13 @@ const WorldBuilder: React.FC<WorldBuilderProps> = ({ isOpen, onClose, settings, 
                     <div className="flex items-center gap-2 text-indigo-700">
                         <Globe2 size={24} />
                         <div>
-                            <h2 className="text-xl font-bold">World Building Toolkit</h2>
-                            <p className="text-xs text-gray-500">Construct geography, history, and rules.</p>
+                            <h2 className="text-xl font-bold">世界观构建工具 (World Builder)</h2>
+                            <p className="text-xs text-gray-500">构建地理、历史与规则</p>
                         </div>
                     </div>
                     <div className="flex items-center gap-3">
                         <button onClick={handleSave} className="px-4 py-2 bg-indigo-600 text-white rounded-lg flex items-center gap-2 text-sm font-medium hover:bg-indigo-700 transition-colors">
-                            <Save size={16} /> Save Changes
+                            <Save size={16} /> 保存更改
                         </button>
                         <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full text-gray-500 transition-colors">
                             <X size={20} />
@@ -295,20 +300,20 @@ const WorldBuilder: React.FC<WorldBuilderProps> = ({ isOpen, onClose, settings, 
                     {/* Sidebar Tabs */}
                     <div className="w-48 bg-gray-50 border-r border-gray-200 flex flex-col p-2 space-y-1">
                         <button onClick={() => setActiveTab('foundation')} className={`px-3 py-2 rounded-lg text-left text-sm font-medium flex items-center gap-2 ${activeTab === 'foundation' ? 'bg-white shadow text-indigo-600' : 'text-gray-600 hover:bg-gray-200'}`}>
-                            <Globe2 size={16}/> Foundation
+                            <Globe2 size={16}/> 基础设定
                         </button>
                         <button onClick={() => setActiveTab('map')} className={`px-3 py-2 rounded-lg text-left text-sm font-medium flex items-center gap-2 ${activeTab === 'map' ? 'bg-white shadow text-indigo-600' : 'text-gray-600 hover:bg-gray-200'}`}>
-                            <Map size={16}/> Map & Locations
+                            <Map size={16}/> 地图 & 地点
                         </button>
                         <button onClick={() => setActiveTab('timeline')} className={`px-3 py-2 rounded-lg text-left text-sm font-medium flex items-center gap-2 ${activeTab === 'timeline' ? 'bg-white shadow text-indigo-600' : 'text-gray-600 hover:bg-gray-200'}`}>
-                            <Clock size={16}/> History & Timeline
+                            <Clock size={16}/> 历史 & 时间线
                         </button>
                         <button onClick={() => setActiveTab('encyclopedia')} className={`px-3 py-2 rounded-lg text-left text-sm font-medium flex items-center gap-2 ${activeTab === 'encyclopedia' ? 'bg-white shadow text-indigo-600' : 'text-gray-600 hover:bg-gray-200'}`}>
-                            <Book size={16}/> Encyclopedia
+                            <Book size={16}/> 设定百科
                         </button>
                         <hr className="border-gray-200 my-2"/>
                         <button onClick={() => setActiveTab('analysis')} className={`px-3 py-2 rounded-lg text-left text-sm font-medium flex items-center gap-2 ${activeTab === 'analysis' ? 'bg-white shadow text-orange-600' : 'text-gray-600 hover:bg-gray-200'}`}>
-                            <AlertTriangle size={16}/> Consistency Check
+                            <AlertTriangle size={16}/> 一致性检查
                         </button>
                     </div>
 

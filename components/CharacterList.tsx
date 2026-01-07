@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Character, NovelSettings, Chapter, PersonalityTraits } from '../types';
-import { Users, X, Copy, Download, Check, Edit2, Save, Plus, Trash2, Sparkles, Loader2, Network, Clock, Image as ImageIcon, Brain, TrendingUp, UserCog, Book } from 'lucide-react';
+import { Users, X, Copy, Download, Check, Edit2, Save, Plus, Trash2, Sparkles, Loader2, Network, Clock, Image as ImageIcon, Brain, TrendingUp, UserCog, Book, GitBranch } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { generateSingleCharacter, generateCharacterImage, analyzeCharacterDepth } from '../services/geminiService';
 
@@ -18,18 +18,18 @@ interface CharacterListProps {
 const PersonalityBars: React.FC<{ traits?: PersonalityTraits }> = ({ traits }) => {
     if (!traits) return null;
     const items = [
-        { label: 'Openness', val: traits.openness, color: 'bg-blue-500' },
-        { label: 'Conscientiousness', val: traits.conscientiousness, color: 'bg-green-500' },
-        { label: 'Extraversion', val: traits.extraversion, color: 'bg-yellow-500' },
-        { label: 'Agreeableness', val: traits.agreeableness, color: 'bg-pink-500' },
-        { label: 'Neuroticism', val: traits.neuroticism, color: 'bg-red-500' },
+        { label: '开放性 (Openness)', val: traits.openness, color: 'bg-blue-500' },
+        { label: '尽责性 (Conscientiousness)', val: traits.conscientiousness, color: 'bg-green-500' },
+        { label: '外向性 (Extraversion)', val: traits.extraversion, color: 'bg-yellow-500' },
+        { label: '宜人性 (Agreeableness)', val: traits.agreeableness, color: 'bg-pink-500' },
+        { label: '神经质 (Neuroticism)', val: traits.neuroticism, color: 'bg-red-500' },
     ];
 
     return (
         <div className="space-y-1 mt-2 bg-slate-50 p-2 rounded border border-slate-100">
             {items.map(item => (
                 <div key={item.label} className="flex items-center text-[10px] gap-2">
-                    <span className="w-24 text-gray-500">{item.label}</span>
+                    <span className="w-28 text-gray-500 truncate">{item.label}</span>
                     <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
                         <div className={`h-full ${item.color}`} style={{ width: `${item.val}%` }}></div>
                     </div>
@@ -113,8 +113,8 @@ const CharacterTimeline: React.FC<{ characters: Character[], chapters: Chapter[]
                         <div className="space-y-2">
                             {mentions.map(c => (
                                 <div key={c.id} className="text-xs bg-gray-50 p-2 rounded border border-gray-100">
-                                    <span className="font-semibold text-indigo-600">Ch.{c.id}: </span>
-                                    <span className="text-gray-600 line-clamp-2">{c.summary || "Mentioned in content."}</span>
+                                    <span className="font-semibold text-indigo-600">第 {c.id} 章: </span>
+                                    <span className="text-gray-600 line-clamp-2">{c.summary || "提及于正文中。"}</span>
                                 </div>
                             ))}
                         </div>
@@ -122,7 +122,7 @@ const CharacterTimeline: React.FC<{ characters: Character[], chapters: Chapter[]
                 );
             })}
             {characters.every(char => !chapters.some(c => c.summary?.includes(char.name) || c.content?.includes(char.name))) && (
-                <div className="text-center text-gray-400 py-10">No specific character events found in generated summaries yet.</div>
+                <div className="text-center text-gray-400 py-10">暂未在已生成的内容中发现角色具体事件。</div>
             )}
         </div>
     );
@@ -147,7 +147,7 @@ const CharacterList: React.FC<CharacterListProps> = ({ characters, isOpen, onClo
 
   const handleCopyAll = async () => {
       const text = localCharacters.map(c => 
-        `NAME: ${c.name}\nROLE: ${c.role}\nDESCRIPTION: ${c.description}\nRELATIONSHIPS: ${c.relationships}\n`
+        `姓名: ${c.name}\n角色: ${c.role}\n描述: ${c.description}\n关系: ${c.relationships}\n`
       ).join('\n---\n\n');
       
       try {
@@ -161,14 +161,14 @@ const CharacterList: React.FC<CharacterListProps> = ({ characters, isOpen, onClo
 
   const handleExportTxt = () => {
       const text = localCharacters.map(c => 
-        `NAME: ${c.name}\nROLE: ${c.role}\nDESCRIPTION: ${c.description}\nRELATIONSHIPS: ${c.relationships}\n`
+        `姓名: ${c.name}\n角色: ${c.role}\n描述: ${c.description}\n关系: ${c.relationships}\n`
       ).join('\n---\n\n');
       
       const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `characters_profiles.txt`;
+      a.download = `角色档案.txt`;
       a.click();
       URL.revokeObjectURL(url);
   };
@@ -199,7 +199,7 @@ const CharacterList: React.FC<CharacterListProps> = ({ characters, isOpen, onClo
   };
 
   const addNewCharacter = () => {
-      const newChar = { name: 'New Character', role: 'Supporting', description: '...', relationships: '...' };
+      const newChar = { name: '新角色', role: '配角', description: '待补充...', relationships: '...' };
       const updated = [newChar, ...localCharacters];
       setLocalCharacters(updated);
       if (onUpdateCharacters) onUpdateCharacters(updated);
@@ -219,7 +219,7 @@ const CharacterList: React.FC<CharacterListProps> = ({ characters, isOpen, onClo
           setViewMode('profiles');
       } catch (e) {
           console.error(e);
-          alert("Failed to generate character.");
+          alert("无法生成角色。");
       } finally {
           setIsGenerating(false);
       }
@@ -236,7 +236,7 @@ const CharacterList: React.FC<CharacterListProps> = ({ characters, isOpen, onClo
           if (onUpdateCharacters) onUpdateCharacters(updated);
       } catch (e: any) {
           console.error(e);
-          alert("Image generation failed: " + e.message);
+          alert("图像生成失败: " + e.message);
       } finally {
           setGeneratingImageFor(null);
       }
@@ -253,7 +253,7 @@ const CharacterList: React.FC<CharacterListProps> = ({ characters, isOpen, onClo
           if (onUpdateCharacters) onUpdateCharacters(updated);
       } catch (e: any) {
           console.error(e);
-          alert("Analysis failed.");
+          alert("分析失败。");
       } finally {
           setAnalyzingIndex(null);
       }
@@ -279,6 +279,11 @@ const CharacterList: React.FC<CharacterListProps> = ({ characters, isOpen, onClo
       return String(content || '');
   };
 
+  const getStorylineName = (id?: string) => {
+      if (!id || !settings?.plotData?.storylines) return null;
+      return settings.plotData.storylines.find(s => s.id === id)?.name;
+  };
+
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col animate-in zoom-in-95 duration-200 border border-gray-200">
@@ -296,22 +301,22 @@ const CharacterList: React.FC<CharacterListProps> = ({ characters, isOpen, onClo
             {/* Tabs */}
             <div className="flex items-center justify-between px-4 pb-0">
                 <div className="flex space-x-1">
-                    <button onClick={() => setViewMode('profiles')} className={`px-3 py-2 text-xs font-medium border-b-2 ${viewMode === 'profiles' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500'}`}><Users size={14} className="inline mr-1"/> 档案 (Profiles)</button>
-                    <button onClick={() => setViewMode('network')} className={`px-3 py-2 text-xs font-medium border-b-2 ${viewMode === 'network' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500'}`}><Network size={14} className="inline mr-1"/> 关系图 (Map)</button>
-                    <button onClick={() => setViewMode('timeline')} className={`px-3 py-2 text-xs font-medium border-b-2 ${viewMode === 'timeline' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500'}`}><Clock size={14} className="inline mr-1"/> 时间线 (Timeline)</button>
-                    <button onClick={() => setViewMode('depth')} className={`px-3 py-2 text-xs font-medium border-b-2 ${viewMode === 'depth' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500'}`}><Brain size={14} className="inline mr-1"/> 深度 (Depth)</button>
+                    <button onClick={() => setViewMode('profiles')} className={`px-3 py-2 text-xs font-medium border-b-2 ${viewMode === 'profiles' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500'}`}><Users size={14} className="inline mr-1"/> 档案</button>
+                    <button onClick={() => setViewMode('network')} className={`px-3 py-2 text-xs font-medium border-b-2 ${viewMode === 'network' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500'}`}><Network size={14} className="inline mr-1"/> 关系图</button>
+                    <button onClick={() => setViewMode('timeline')} className={`px-3 py-2 text-xs font-medium border-b-2 ${viewMode === 'timeline' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500'}`}><Clock size={14} className="inline mr-1"/> 时间线</button>
+                    <button onClick={() => setViewMode('depth')} className={`px-3 py-2 text-xs font-medium border-b-2 ${viewMode === 'depth' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500'}`}><Brain size={14} className="inline mr-1"/> 深度分析</button>
                 </div>
 
                 <div className="flex items-center space-x-2 pb-2">
                     {settings && (
-                        <button onClick={handleAiAddCharacter} disabled={isGenerating} className="p-1.5 hover:bg-purple-50 rounded-lg text-purple-600 border border-purple-100">
+                        <button onClick={handleAiAddCharacter} disabled={isGenerating} title="AI 生成角色" className="p-1.5 hover:bg-purple-50 rounded-lg text-purple-600 border border-purple-100">
                             {isGenerating ? <Loader2 size={16} className="animate-spin"/> : <Sparkles size={16} />}
                         </button>
                     )}
-                    <button onClick={addNewCharacter} className="p-1.5 hover:bg-indigo-50 rounded-lg text-indigo-600 border border-indigo-100"><Plus size={16} /></button>
+                    <button onClick={addNewCharacter} title="新建角色" className="p-1.5 hover:bg-indigo-50 rounded-lg text-indigo-600 border border-indigo-100"><Plus size={16} /></button>
                     <div className="h-4 w-px bg-gray-200 mx-1"></div>
-                    <button onClick={handleCopyAll} className="p-1.5 hover:bg-gray-100 rounded text-gray-500">{copied ? <Check size={16} className="text-green-600" /> : <Copy size={16} />}</button>
-                    <button onClick={handleExportTxt} className="p-1.5 hover:bg-gray-100 rounded text-gray-500"><Download size={16} /></button>
+                    <button onClick={handleCopyAll} title="复制所有" className="p-1.5 hover:bg-gray-100 rounded text-gray-500">{copied ? <Check size={16} className="text-green-600" /> : <Copy size={16} />}</button>
+                    <button onClick={handleExportTxt} title="导出 TXT" className="p-1.5 hover:bg-gray-100 rounded text-gray-500"><Download size={16} /></button>
                 </div>
             </div>
         </div>
@@ -334,53 +339,79 @@ const CharacterList: React.FC<CharacterListProps> = ({ characters, isOpen, onClo
                             </div>
                             <div className="flex-1 grid grid-cols-2 gap-3">
                                 <div>
-                                    <label className="block text-xs font-medium text-gray-500 mb-1">Name</label>
+                                    <label className="block text-xs font-medium text-gray-500 mb-1">姓名 (Name)</label>
                                     <input value={safeRender(editForm.name)} onChange={e => setEditForm({...editForm, name: e.target.value})} className="w-full text-sm border p-1 rounded" />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-medium text-gray-500 mb-1">Role</label>
+                                    <label className="block text-xs font-medium text-gray-500 mb-1">角色定位 (Role)</label>
                                     <input value={safeRender(editForm.role)} onChange={e => setEditForm({...editForm, role: e.target.value})} className="w-full text-sm border p-1 rounded" />
                                 </div>
                             </div>
                         </div>
                         
-                        <div><label className="block text-xs font-medium text-gray-500 mb-1">Description</label><textarea value={safeRender(editForm.description)} onChange={e => setEditForm({...editForm, description: e.target.value})} className="w-full text-sm border p-1 rounded h-16" /></div>
+                        <div><label className="block text-xs font-medium text-gray-500 mb-1">描述 (Description)</label><textarea value={safeRender(editForm.description)} onChange={e => setEditForm({...editForm, description: e.target.value})} className="w-full text-sm border p-1 rounded h-16" /></div>
                         
+                        {/* Storyline Selector */}
+                        {settings?.plotData?.storylines && (
+                            <div>
+                                <label className="block text-xs font-medium text-gray-500 mb-1 flex items-center gap-1"><GitBranch size={12}/> 关联故事线 (Storyline)</label>
+                                <select 
+                                    value={editForm.storylineId || ''} 
+                                    onChange={e => setEditForm({...editForm, storylineId: e.target.value})}
+                                    className="w-full text-sm border p-1 rounded bg-white"
+                                >
+                                    <option value="">-- 无特定故事线 --</option>
+                                    {settings.plotData.storylines.map(sl => (
+                                        <option key={sl.id} value={sl.id}>{sl.name} ({sl.type})</option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
+
                         <div className="grid grid-cols-2 gap-3">
-                             <div><label className="block text-xs font-medium text-gray-500 mb-1">Background Story</label><textarea value={safeRender(editForm.backgroundStory || '')} onChange={e => setEditForm({...editForm, backgroundStory: e.target.value})} className="w-full text-sm border p-1 rounded h-20" placeholder="Childhood, trauma, key events..." /></div>
-                             <div><label className="block text-xs font-medium text-gray-500 mb-1">Skills & Abilities</label><textarea value={safeRender(editForm.skills || '')} onChange={e => setEditForm({...editForm, skills: e.target.value})} className="w-full text-sm border p-1 rounded h-20" placeholder="Magic, combat, intelligence..." /></div>
+                             <div><label className="block text-xs font-medium text-gray-500 mb-1">背景故事 (Background)</label><textarea value={safeRender(editForm.backgroundStory || '')} onChange={e => setEditForm({...editForm, backgroundStory: e.target.value})} className="w-full text-sm border p-1 rounded h-20" placeholder="童年、创伤、关键经历..." /></div>
+                             <div><label className="block text-xs font-medium text-gray-500 mb-1">技能与能力 (Skills)</label><textarea value={safeRender(editForm.skills || '')} onChange={e => setEditForm({...editForm, skills: e.target.value})} className="w-full text-sm border p-1 rounded h-20" placeholder="魔法、战斗、智力..." /></div>
                         </div>
 
                         {/* Personality Sliders */}
                         <div className="bg-slate-50 p-2 rounded border border-slate-100">
-                            <label className="block text-xs font-bold text-gray-600 mb-2">Big 5 Personality Dimensions (0-100)</label>
+                            <label className="block text-xs font-bold text-gray-600 mb-2">五维性格模型 (Big 5 Personality) - 0-100</label>
                             <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-                                {(['openness', 'conscientiousness', 'extraversion', 'agreeableness', 'neuroticism'] as const).map(trait => (
-                                    <div key={trait} className="flex items-center gap-2">
-                                        <span className="text-[10px] w-20 text-gray-500 capitalize">{trait}</span>
-                                        <input 
-                                            type="range" min="0" max="100" 
-                                            value={editForm.personalityTags?.[trait] || 50} 
-                                            onChange={(e) => updateTrait(trait, e.target.value)}
-                                            className="flex-1 h-1 bg-gray-300 rounded-lg appearance-none cursor-pointer"
-                                        />
-                                    </div>
-                                ))}
+                                {(['openness', 'conscientiousness', 'extraversion', 'agreeableness', 'neuroticism'] as const).map(trait => {
+                                    const labels = {
+                                        openness: '开放性',
+                                        conscientiousness: '尽责性',
+                                        extraversion: '外向性',
+                                        agreeableness: '宜人性',
+                                        neuroticism: '神经质'
+                                    };
+                                    return (
+                                        <div key={trait} className="flex items-center gap-2">
+                                            <span className="text-[10px] w-20 text-gray-500">{labels[trait]}</span>
+                                            <input 
+                                                type="range" min="0" max="100" 
+                                                value={editForm.personalityTags?.[trait] || 50} 
+                                                onChange={(e) => updateTrait(trait, e.target.value)}
+                                                className="flex-1 h-1 bg-gray-300 rounded-lg appearance-none cursor-pointer"
+                                            />
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </div>
 
                         <div className="grid grid-cols-2 gap-3">
-                             <div><label className="block text-xs font-medium text-gray-500 mb-1">Relationships</label><textarea value={safeRender(editForm.relationships)} onChange={e => setEditForm({...editForm, relationships: e.target.value})} className="w-full text-sm border p-1 rounded h-16" /></div>
-                             <div><label className="block text-xs font-medium text-gray-500 mb-1">Arc / Goals</label><textarea value={safeRender(editForm.arc || editForm.goals || '')} onChange={e => setEditForm({...editForm, arc: e.target.value})} className="w-full text-sm border p-1 rounded h-16" /></div>
+                             <div><label className="block text-xs font-medium text-gray-500 mb-1">人际关系 (Relationships)</label><textarea value={safeRender(editForm.relationships)} onChange={e => setEditForm({...editForm, relationships: e.target.value})} className="w-full text-sm border p-1 rounded h-16" /></div>
+                             <div><label className="block text-xs font-medium text-gray-500 mb-1">弧光/目标 (Arc/Goals)</label><textarea value={safeRender(editForm.arc || editForm.goals || '')} onChange={e => setEditForm({...editForm, arc: e.target.value})} className="w-full text-sm border p-1 rounded h-16" /></div>
                         </div>
                         {viewMode === 'depth' && (
-                            <div><label className="block text-xs font-medium text-purple-600 mb-1">Psychology & Internal Conflict</label><textarea value={safeRender(editForm.psychology || '')} onChange={e => setEditForm({...editForm, psychology: e.target.value})} className="w-full text-sm border border-purple-200 p-1 rounded h-24 bg-purple-50" /></div>
+                            <div><label className="block text-xs font-medium text-purple-600 mb-1">心理与内在冲突 (Psychology & Conflict)</label><textarea value={safeRender(editForm.psychology || '')} onChange={e => setEditForm({...editForm, psychology: e.target.value})} className="w-full text-sm border border-purple-200 p-1 rounded h-24 bg-purple-50" /></div>
                         )}
                         <div className="flex justify-end space-x-2 pt-2">
                              <button onClick={() => deleteCharacter(index)} className="p-1 text-red-500 hover:bg-red-50 rounded"><Trash2 size={16} /></button>
                              <div className="flex-1"></div>
-                             <button onClick={() => setEditingIndex(null)} className="px-3 py-1 text-xs text-gray-600 hover:bg-gray-100 rounded">Cancel</button>
-                             <button onClick={saveEditing} className="px-3 py-1 text-xs bg-indigo-600 text-white rounded hover:bg-indigo-700 flex items-center space-x-1"><Save size={14}/> <span>Save</span></button>
+                             <button onClick={() => setEditingIndex(null)} className="px-3 py-1 text-xs text-gray-600 hover:bg-gray-100 rounded">取消</button>
+                             <button onClick={saveEditing} className="px-3 py-1 text-xs bg-indigo-600 text-white rounded hover:bg-indigo-700 flex items-center space-x-1"><Save size={14}/> <span>保存</span></button>
                         </div>
                     </div>
                 ) : (
@@ -389,16 +420,24 @@ const CharacterList: React.FC<CharacterListProps> = ({ characters, isOpen, onClo
                             <div className="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden border border-gray-200 relative group/img">
                                 {char.imageUrl ? <img src={char.imageUrl} alt={char.name} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-gray-300"><Users size={32} /></div>}
                                 <div className="absolute inset-0 bg-black/0 group-hover/img:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover/img:opacity-100">
-                                     {generatingImageFor === index ? <Loader2 className="animate-spin text-white" /> : <button onClick={() => handleGenerateImage(index)} className="bg-white/90 p-1.5 rounded-full text-indigo-600 shadow-sm"><Sparkles size={14} /></button>}
+                                     {generatingImageFor === index ? <Loader2 className="animate-spin text-white" /> : <button onClick={() => handleGenerateImage(index)} title="生成插画" className="bg-white/90 p-1.5 rounded-full text-indigo-600 shadow-sm"><Sparkles size={14} /></button>}
                                 </div>
                             </div>
                             <PersonalityBars traits={char.personalityTags} />
                         </div>
                         <div className="flex-1">
                             <div className="flex justify-between items-start mb-2">
-                                <h4 className="text-base font-bold text-gray-900 flex items-center gap-2">{safeRender(char.name)}<span className="text-xs bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full font-normal">{safeRender(char.role)}</span></h4>
+                                <h4 className="text-base font-bold text-gray-900 flex items-center gap-2">
+                                    {safeRender(char.name)}
+                                    <span className="text-xs bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full font-normal">{safeRender(char.role)}</span>
+                                    {char.storylineId && (
+                                        <span className="text-[10px] bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full font-normal flex items-center gap-1" title="关联故事线">
+                                            <GitBranch size={10}/> {getStorylineName(char.storylineId) || 'Storyline'}
+                                        </span>
+                                    )}
+                                </h4>
                                 <div className="flex gap-1">
-                                    {viewMode === 'depth' && <button onClick={() => handleAnalyzeDepth(index)} disabled={analyzingIndex === index} className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded hover:bg-purple-200 flex items-center gap-1">{analyzingIndex === index ? <Loader2 size={10} className="animate-spin"/> : <Brain size={12}/>} Analyze</button>}
+                                    {viewMode === 'depth' && <button onClick={() => handleAnalyzeDepth(index)} disabled={analyzingIndex === index} className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded hover:bg-purple-200 flex items-center gap-1">{analyzingIndex === index ? <Loader2 size={10} className="animate-spin"/> : <Brain size={12}/>} 深度分析</button>}
                                     {onUpdateCharacters && <button onClick={() => startEditing(index)} className="text-gray-400 hover:text-indigo-600 opacity-0 group-hover:opacity-100"><Edit2 size={16} /></button>}
                                 </div>
                             </div>
@@ -408,22 +447,22 @@ const CharacterList: React.FC<CharacterListProps> = ({ characters, isOpen, onClo
                                 {(char.backgroundStory || char.skills) && (
                                     <div className="grid grid-cols-2 gap-2 text-xs">
                                         <div className="bg-orange-50 p-1.5 rounded text-orange-800">
-                                            <span className="font-bold">Background: </span>{char.backgroundStory ? char.backgroundStory.slice(0, 50) + '...' : '-'}
+                                            <span className="font-bold">背景: </span>{char.backgroundStory ? char.backgroundStory.slice(0, 50) + '...' : '-'}
                                         </div>
                                         <div className="bg-blue-50 p-1.5 rounded text-blue-800">
-                                            <span className="font-bold">Skills: </span>{char.skills ? char.skills.slice(0, 50) + '...' : '-'}
+                                            <span className="font-bold">技能: </span>{char.skills ? char.skills.slice(0, 50) + '...' : '-'}
                                         </div>
                                     </div>
                                 )}
 
                                 {viewMode === 'depth' && char.psychology ? (
                                     <div className="bg-purple-50 p-2 rounded text-xs border border-purple-100 text-purple-900 whitespace-pre-wrap">
-                                        <strong>Psychology:</strong> {safeRender(char.psychology)}
+                                        <strong>心理分析:</strong> {safeRender(char.psychology)}
                                     </div>
                                 ) : (
                                     <div className="flex gap-2">
-                                        <div className="flex-1 bg-gray-50 p-2 rounded text-xs border border-gray-100"><span className="font-semibold text-gray-700 block mb-0.5">Relationships:</span> {safeRender(char.relationships)}</div>
-                                        {(char.arc || char.goals) && <div className="flex-1 bg-orange-50 p-2 rounded text-xs border border-orange-100"><span className="font-semibold text-orange-700 block mb-0.5">Goals/Arc:</span> {safeRender(char.arc || char.goals)}</div>}
+                                        <div className="flex-1 bg-gray-50 p-2 rounded text-xs border border-gray-100"><span className="font-semibold text-gray-700 block mb-0.5">关系:</span> {safeRender(char.relationships)}</div>
+                                        {(char.arc || char.goals) && <div className="flex-1 bg-orange-50 p-2 rounded text-xs border border-orange-100"><span className="font-semibold text-orange-700 block mb-0.5">目标/弧光:</span> {safeRender(char.arc || char.goals)}</div>}
                                     </div>
                                 )}
                             </div>
@@ -435,7 +474,7 @@ const CharacterList: React.FC<CharacterListProps> = ({ characters, isOpen, onClo
 
           {viewMode === 'network' && (
               <div className="bg-white rounded-xl border border-gray-200 h-[400px] flex items-center justify-center">
-                  {localCharacters.length < 2 ? <div className="text-gray-400 text-sm">Need at least 2 characters.</div> : <CharacterNetwork characters={localCharacters} />}
+                  {localCharacters.length < 2 ? <div className="text-gray-400 text-sm">至少需要 2 个角色才能显示关系图。</div> : <CharacterNetwork characters={localCharacters} />}
               </div>
           )}
 
@@ -446,7 +485,7 @@ const CharacterList: React.FC<CharacterListProps> = ({ characters, isOpen, onClo
           )}
 
         </div>
-        <div className="p-4 border-t border-gray-100 bg-white text-center text-xs text-gray-400 rounded-b-xl">Total: {localCharacters.length} Characters</div>
+        <div className="p-4 border-t border-gray-100 bg-white text-center text-xs text-gray-400 rounded-b-xl">共 {localCharacters.length} 个角色</div>
       </div>
     </div>
   );

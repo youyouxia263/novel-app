@@ -872,8 +872,6 @@ Technology: ${newWorld.technology}
                 onUpdateContent={handleUpdateChapter}
                 characters={state.characters}
                 onStop={handleStopGeneration}
-                chapters={state.chapters}
-                onChapterSelect={selectChapter}
               />
             )}
           </>

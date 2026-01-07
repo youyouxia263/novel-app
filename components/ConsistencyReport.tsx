@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Chapter } from '../types';
 import { X, CheckCircle2, AlertTriangle, FileSearch, Wrench, Loader2 } from 'lucide-react';
@@ -24,7 +25,7 @@ const ConsistencyReport: React.FC<ConsistencyReportProps> = ({ chapters, isOpen,
         <div className="flex items-center justify-between p-5 border-b border-gray-100">
           <div className="flex items-center space-x-2 text-orange-600">
             <FileSearch className="w-5 h-5" />
-            <h3 className="text-lg font-bold">一致性校验报告 (Consistency Report)</h3>
+            <h3 className="text-lg font-bold">一致性校验报告</h3>
           </div>
           <button 
             onClick={onClose}
@@ -54,7 +55,7 @@ const ConsistencyReport: React.FC<ConsistencyReportProps> = ({ chapters, isOpen,
            {/* Issues List */}
            {hasIssues && (
              <div className="space-y-4">
-                <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wider">详细问题 (Details)</h4>
+                <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wider">详细问题</h4>
                 {chaptersWithIssues.map(chapter => (
                     <div key={chapter.id} className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
                         <div className="flex justify-between items-center mb-2 pb-2 border-b border-gray-50">
@@ -67,7 +68,7 @@ const ConsistencyReport: React.FC<ConsistencyReportProps> = ({ chapters, isOpen,
                                     className="flex items-center space-x-1 px-3 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 text-xs font-medium rounded-full transition-colors disabled:opacity-50"
                                 >
                                     {chapter.isGenerating ? <Loader2 size={12} className="animate-spin"/> : <Wrench size={12} />}
-                                    <span>{chapter.isGenerating ? "修复中..." : "AI 自动修复 (Auto Fix)"}</span>
+                                    <span>{chapter.isGenerating ? "修复中..." : "AI 自动修复"}</span>
                                 </button>
                             )}
                         </div>
@@ -83,15 +84,15 @@ const ConsistencyReport: React.FC<ConsistencyReportProps> = ({ chapters, isOpen,
            <div className="grid grid-cols-3 gap-4 pt-4 border-t border-gray-200">
                <div className="text-center">
                    <div className="text-lg font-bold text-gray-700">{chaptersWithIssues.length}</div>
-                   <div className="text-[10px] text-gray-400 uppercase">Issues</div>
+                   <div className="text-[10px] text-gray-400 uppercase">问题</div>
                </div>
                <div className="text-center">
                    <div className="text-lg font-bold text-gray-700">{consistentChapters.length}</div>
-                   <div className="text-[10px] text-gray-400 uppercase">Passed/Fixed</div>
+                   <div className="text-[10px] text-gray-400 uppercase">通过/修复</div>
                </div>
                <div className="text-center">
                    <div className="text-lg font-bold text-gray-700">{uncheckedChapters.length}</div>
-                   <div className="text-[10px] text-gray-400 uppercase">Not Checked</div>
+                   <div className="text-[10px] text-gray-400 uppercase">未检查</div>
                </div>
            </div>
 
