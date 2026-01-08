@@ -30,7 +30,8 @@ export const PROMPT_KEYS = {
 };
 
 export const DEFAULT_PROMPTS: Record<string, string> = {
-    [PROMPT_KEYS.GENERATE_PREMISE]: `Role: Professional Novelist/Editor.
+    [PROMPT_KEYS.GENERATE_PREMISE]: `Output Language: {{languageInstruction}}
+Role: Professional Novelist/Editor.
 Task: Create a compelling story premise based on the user's input.
 Input: Title: "{{title}}", Idea: "{{premise}}"
 Requirements:
@@ -39,24 +40,28 @@ Requirements:
 - Tone: {{writingTone}}
 - Output a single, engaging paragraph summarizing the core conflict, protagonist, and stakes.`,
 
-    [PROMPT_KEYS.GENERATE_TITLES]: `Role: Best-selling Author.
+    [PROMPT_KEYS.GENERATE_TITLES]: `Output Language: {{languageInstruction}}
+Role: Best-selling Author.
 Task: Generate 5 catchy titles for a {{mainCategory}} novel.
 Context: {{premise}}
 Themes: {{themes}}
 Output: A JSON array of strings. e.g. ["Title 1", "Title 2"]`,
 
-    [PROMPT_KEYS.GENERATE_WORLD_SETTING]: `Role: World Builder.
+    [PROMPT_KEYS.GENERATE_WORLD_SETTING]: `Output Language: {{languageInstruction}}
+Role: World Builder.
 Task: Create a high-level world setting summary for a {{mainCategory}} novel.
 Context: {{premise}}
 Themes: {{themes}}
 Output: A concise description of the world, magic system/technology, and key locations.`,
 
-    [PROMPT_KEYS.GENERATE_CHARACTERS]: `Role: Character Designer.
+    [PROMPT_KEYS.GENERATE_CHARACTERS]: `Output Language: {{languageInstruction}}
+Role: Character Designer.
 Task: Create a cast of main characters for the story.
 Context: {{premise}}
 Output: JSON array of character objects with fields: name, role, description, relationships, backgroundStory, skills.`,
 
-    [PROMPT_KEYS.GENERATE_OUTLINE]: `Role: Plot Architect.
+    [PROMPT_KEYS.GENERATE_OUTLINE]: `Output Language: {{languageInstruction}}
+Role: Plot Architect.
 Task: Generate a chapter-by-chapter outline.
 Novel Type: {{novelType}}
 Target Chapters: {{chapterCount}}
@@ -71,7 +76,8 @@ Requirements:
 - "volumeTitle" is the title of the volume (e.g., "The Beginning", "Rise to Power").
 - Do not repeat or loop data.`,
 
-    [PROMPT_KEYS.GENERATE_CHAPTER]: `Role: Fiction Writer.
+    [PROMPT_KEYS.GENERATE_CHAPTER]: `Output Language: {{languageInstruction}}
+Role: Fiction Writer.
 Task: Write Chapter {{chapterId}}: {{chapterTitle}}.
 Summary: {{chapterSummary}}
 Previous Story: {{storySummaries}}
@@ -81,13 +87,15 @@ Style: {{writingStyle}}
 Perspective: {{narrativePerspective}}
 Requirements: Write a detailed, engaging chapter. Minimum 1000 words.`,
 
-    [PROMPT_KEYS.EXPAND_TEXT]: `Role: Co-writer.
+    [PROMPT_KEYS.EXPAND_TEXT]: `Output Language: {{languageInstruction}}
+Role: Co-writer.
 Task: Expand and polish the following text for a {{section}} section.
 Text: "{{text}}"
 Context: {{premise}}
 Requirement: Add detail, depth, and clarity.`,
 
-    [PROMPT_KEYS.CHECK_PLOT_LOGIC]: `Task: Analyze the plot structure for logical consistency and provide concrete suggestions for improvement.
+    [PROMPT_KEYS.CHECK_PLOT_LOGIC]: `Output Language: {{languageInstruction}}
+Task: Analyze the plot structure for logical consistency and provide concrete suggestions for improvement.
 
 Plot Plan:
 {{plan}}
@@ -112,7 +120,8 @@ Output Format (Markdown):
 - **Cohesiveness**: X/10
 - **Excitement**: X/10`,
 
-    [PROMPT_KEYS.ANALYZE_NOVEL_COHERENCE]: `Role: Senior Continuity Editor.
+    [PROMPT_KEYS.ANALYZE_NOVEL_COHERENCE]: `Output Language: {{languageInstruction}}
+Role: Senior Continuity Editor.
 Task: Analyze the entire novel sequence for coherence, continuity errors, and flow.
 
 Novel Title: {{title}}

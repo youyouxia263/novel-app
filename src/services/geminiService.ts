@@ -12,6 +12,12 @@ const getClient = (settings: NovelSettings) => {
     return new GoogleGenAI({ apiKey: key });
 };
 
+const getLanguageInstruction = (settings: NovelSettings) => {
+    return settings.language === 'zh' 
+        ? 'You MUST write in Simplified Chinese (简体中文). Do not use English.' 
+        : 'English.';
+};
+
 export const sanitizeCharacter = (char: any): Character => {
     return {
         name: char.name || 'Unknown',
@@ -30,15 +36,14 @@ export const sanitizeCharacter = (char: any): Character => {
     };
 };
 
-// ... (keep basic generators)
-
 export const generateTitles = async (settings: NovelSettings): Promise<string[]> => {
     const ai = getClient(settings);
     const template = getPromptTemplate(PROMPT_KEYS.GENERATE_TITLES, settings);
     const prompt = fillPrompt(template, {
         mainCategory: settings.mainCategory,
         premise: settings.premise,
-        themes: settings.themes.join(', ')
+        themes: settings.themes.join(', '),
+        languageInstruction: getLanguageInstruction(settings)
     });
 
     const response = await ai.models.generateContent({
@@ -70,7 +75,8 @@ export const generatePremise = async (title: string, idea: string, settings: Nov
         premise: idea,
         mainCategory: settings.mainCategory,
         themes: settings.themes.join(', '),
-        writingTone: settings.writingTone
+        writingTone: settings.writingTone,
+        languageInstruction: getLanguageInstruction(settings)
     });
 
     const response = await ai.models.generateContent({
@@ -87,7 +93,8 @@ export const expandText = async (text: string, section: string, settings: NovelS
     const prompt = fillPrompt(template, {
         text,
         section,
-        premise: settings.premise
+        premise: settings.premise,
+        languageInstruction: getLanguageInstruction(settings)
     });
 
     const response = await ai.models.generateContent({
@@ -103,7 +110,8 @@ export const generateWorldSetting = async (settings: NovelSettings): Promise<str
     const prompt = fillPrompt(template, {
         premise: settings.premise,
         mainCategory: settings.mainCategory,
-        themes: settings.themes.join(', ')
+        themes: settings.themes.join(', '),
+        languageInstruction: getLanguageInstruction(settings)
     });
 
     const response = await ai.models.generateContent({
@@ -115,7 +123,11 @@ export const generateWorldSetting = async (settings: NovelSettings): Promise<str
 
 export const generateCharacterConcepts = async (settings: NovelSettings): Promise<string> => {
     const ai = getClient(settings);
-    const prompt = `Generate a list of main character concepts for a ${settings.mainCategory} story: ${settings.premise}. Return as a list.`;
+    const prompt = `Output Language: ${getLanguageInstruction(settings)}
+    Task: Generate a list of main character concepts for a ${settings.mainCategory} story.
+    Premise: ${settings.premise}. 
+    Requirement: Return as a concise bulleted list or paragraph.`;
+    
     const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
         contents: prompt,
@@ -123,7 +135,7 @@ export const generateCharacterConcepts = async (settings: NovelSettings): Promis
     return response.text || '';
 };
 
-// ... (keep generateOutline)
+// --- Structured Generation ---
 
 export const generateOutline = async (
     settings: NovelSettings, 
@@ -136,7 +148,8 @@ export const generateOutline = async (
         novelType: settings.novelType,
         chapterCount: settings.chapterCount.toString(),
         premise: settings.premise,
-        mainCharacters: settings.mainCharacters || ''
+        mainCharacters: settings.mainCharacters || '',
+        languageInstruction: getLanguageInstruction(settings)
     });
 
     const response = await ai.models.generateContent({
@@ -239,8 +252,6 @@ export const generateOutline = async (
     }
 };
 
-// ... (keep generateCharacters)
-
 export const generateCharacters = async (
     settings: NovelSettings,
     signal?: AbortSignal,
@@ -249,7 +260,8 @@ export const generateCharacters = async (
     const ai = getClient(settings);
     const template = getPromptTemplate(PROMPT_KEYS.GENERATE_CHARACTERS, settings);
     const prompt = fillPrompt(template, {
-        premise: settings.premise
+        premise: settings.premise,
+        languageInstruction: getLanguageInstruction(settings)
     });
 
     const response = await ai.models.generateContent({
@@ -315,7 +327,8 @@ export async function* generateChapterStream(
         writingTone: settings.writingTone,
         writingStyle: settings.writingStyle,
         narrativePerspective: settings.narrativePerspective,
-        charContext
+        charContext,
+        languageInstruction: getLanguageInstruction(settings)
     });
 
     const streamResult = await ai.models.generateContentStream({
@@ -329,8 +342,6 @@ export async function* generateChapterStream(
     }
 }
 
-// ... (keep extendChapter, continueWriting, summarizeChapter, checkGrammar, autoCorrectGrammar, analyzePacing)
-
 export async function* extendChapter(
     currentContent: string,
     settings: NovelSettings,
@@ -342,7 +353,8 @@ export async function* extendChapter(
     onUsage?: (usage: {input: number, output: number}) => void
 ): AsyncGenerator<string, void, unknown> {
     const ai = getClient(settings);
-    const prompt = `You are writing chapter: ${chapterTitle}. 
+    const prompt = `Output Language: ${getLanguageInstruction(settings)}
+    You are writing chapter: ${chapterTitle}. 
     Current text:\n${currentContent.slice(-2000)}\n\n
     Goal: Continue the scene naturally to reach ${targetWords} words (currently ${currentWords}). 
     Keep the same tone and style.`;
@@ -365,7 +377,8 @@ export async function* continueWriting(
     characters: Character[]
 ): AsyncGenerator<string, void, unknown> {
     const ai = getClient(settings);
-    const prompt = `Continue writing this story (Chapter: ${chapterTitle}). 
+    const prompt = `Output Language: ${getLanguageInstruction(settings)}
+    Continue writing this story (Chapter: ${chapterTitle}). 
     Context: ${currentText.slice(-2000)}.
     Maintain the style: ${settings.writingStyle}, Tone: ${settings.writingTone}.`;
 
@@ -385,7 +398,9 @@ export const summarizeChapter = async (
     onUsage?: (usage: {input: number, output: number}) => void
 ): Promise<string> => {
     const ai = getClient(settings);
-    const prompt = `Summarize the following chapter content in 2-3 sentences:\n\n${content.slice(0, 10000)}`;
+    const prompt = `Output Language: ${getLanguageInstruction(settings)}
+    Summarize the following chapter content in 2-3 sentences.
+    Content:\n\n${content.slice(0, 10000)}`;
     const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
         contents: prompt,
@@ -402,7 +417,8 @@ export const summarizeChapter = async (
 
 export const checkGrammar = async (text: string, settings: NovelSettings): Promise<any[]> => {
     const ai = getClient(settings);
-    const prompt = `Check the following text for grammar and spelling errors. 
+    const prompt = `Output Language of Explanation: ${getLanguageInstruction(settings)}
+    Check the following text for grammar and spelling errors. 
     Return a JSON array of objects with { original, suggestion, explanation }.
     Text: ${text.slice(0, 5000)}`; 
     
@@ -421,7 +437,8 @@ export const checkGrammar = async (text: string, settings: NovelSettings): Promi
 
 export const autoCorrectGrammar = async (text: string, settings: NovelSettings): Promise<string> => {
     const ai = getClient(settings);
-    const prompt = `Correct the grammar and spelling of the following text directly. Maintain style.
+    const prompt = `Output Language: ${getLanguageInstruction(settings)}
+    Correct the grammar and spelling of the following text directly. Maintain style.
     Text: ${text.slice(0, 5000)}`;
     
     const response = await ai.models.generateContent({
@@ -433,7 +450,8 @@ export const autoCorrectGrammar = async (text: string, settings: NovelSettings):
 
 export const analyzePacing = async (text: string, settings: NovelSettings): Promise<string> => {
     const ai = getClient(settings);
-    const prompt = `Analyze the pacing and tension of this text.
+    const prompt = `Output Language: ${getLanguageInstruction(settings)}
+    Analyze the pacing and tension of this text.
     Text: ${text.slice(0, 5000)}`;
     
     const response = await ai.models.generateContent({
@@ -445,7 +463,8 @@ export const analyzePacing = async (text: string, settings: NovelSettings): Prom
 
 export const analyzeImportedNovel = async (text: string, settings: NovelSettings): Promise<any> => {
     const ai = getClient(settings);
-    const prompt = `Analyze the beginning of this novel and extract metadata.
+    const prompt = `Output Language: ${getLanguageInstruction(settings)}
+    Analyze the beginning of this novel and extract metadata.
     Text: ${text.slice(0, 5000)}
     Output JSON with: title, premise, mainCategory, worldSetting, characters (array of {name, role}).`;
     
@@ -462,12 +481,11 @@ export const analyzeImportedNovel = async (text: string, settings: NovelSettings
     }
 };
 
-// ... (keep generateSingleCharacter, generateCharacterImage, analyzeCharacterDepth, world gen functions, checkPlotLogic)
-
 export const generateSingleCharacter = async (settings: NovelSettings, existingChars: Character[]): Promise<Character> => {
     const ai = getClient(settings);
     const existingNames = existingChars.map(c => c.name).join(', ');
-    const prompt = `Create a new unique character for a ${settings.mainCategory} story.
+    const prompt = `Output Language: ${getLanguageInstruction(settings)}
+    Create a new unique character for a ${settings.mainCategory} story.
     Existing characters: ${existingNames}.
     Premise: ${settings.premise}.
     Output JSON: name, role, description, relationships, backgroundStory, skills, personalityTags (openness, etc 0-100).`;
@@ -510,7 +528,8 @@ export const generateCharacterImage = async (character: Character, settings: Nov
 
 export const analyzeCharacterDepth = async (character: Character, settings: NovelSettings): Promise<string> => {
     const ai = getClient(settings);
-    const prompt = `Analyze the depth, psychology, and potential arc for: ${character.name}.
+    const prompt = `Output Language: ${getLanguageInstruction(settings)}
+    Analyze the depth, psychology, and potential arc for: ${character.name}.
     Description: ${character.description}.
     Role: ${character.role}.`;
     
@@ -523,7 +542,8 @@ export const analyzeCharacterDepth = async (character: Character, settings: Nove
 
 export const generateWorldFoundation = async (settings: NovelSettings, category: string): Promise<string> => {
     const ai = getClient(settings);
-    const prompt = `Create detailed ${category} setting for a ${settings.mainCategory} world.
+    const prompt = `Output Language: ${getLanguageInstruction(settings)}
+    Create detailed ${category} setting for a ${settings.mainCategory} world.
     Premise: ${settings.premise}.`;
     
     const response = await ai.models.generateContent({
@@ -535,7 +555,8 @@ export const generateWorldFoundation = async (settings: NovelSettings, category:
 
 export const generateWorldLocations = async (settings: NovelSettings): Promise<WorldLocation[]> => {
     const ai = getClient(settings);
-    const prompt = `Generate key locations for this world: ${settings.premise}.
+    const prompt = `Output Language: ${getLanguageInstruction(settings)}
+    Generate key locations for this world: ${settings.premise}.
     Output JSON array: name, description, type (city/region/landmark), x (0-400), y (0-300).`;
     
     const response = await ai.models.generateContent({
@@ -553,7 +574,8 @@ export const generateWorldLocations = async (settings: NovelSettings): Promise<W
 
 export const generateWorldTimeline = async (settings: NovelSettings): Promise<WorldEvent[]> => {
     const ai = getClient(settings);
-    const prompt = `Generate a historical timeline for this world.
+    const prompt = `Output Language: ${getLanguageInstruction(settings)}
+    Generate a historical timeline for this world.
     Output JSON array: year, description.`;
     
     const response = await ai.models.generateContent({
@@ -570,7 +592,8 @@ export const generateWorldTimeline = async (settings: NovelSettings): Promise<Wo
 
 export const analyzeWorldConsistency = async (world: WorldData, settings: NovelSettings): Promise<string> => {
     const ai = getClient(settings);
-    const prompt = `Analyze the consistency of this world setting:
+    const prompt = `Output Language: ${getLanguageInstruction(settings)}
+    Analyze the consistency of this world setting:
     Geography: ${world.geography}
     Society: ${world.society}
     Magic/Tech: ${world.technology}
@@ -611,7 +634,8 @@ export const checkPlotLogic = async (plotData: PlotData, settings: NovelSettings
     `;
     
     const prompt = fillPrompt(template, {
-        plan: plan
+        plan: plan,
+        languageInstruction: getLanguageInstruction(settings)
     });
     
     const response = await ai.models.generateContent({
@@ -644,7 +668,8 @@ export const analyzeNovelCoherence = async (
         title: settings.title,
         premise: settings.premise,
         characters: charList,
-        sequence: sequence
+        sequence: sequence,
+        languageInstruction: getLanguageInstruction(settings)
     });
 
     const response = await ai.models.generateContent({
