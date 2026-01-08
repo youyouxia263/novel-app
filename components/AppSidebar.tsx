@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Plus, Book, Trash2, FileText, Layout, Settings, Cpu, MessageSquareQuote, ChevronDown, ChevronRight, Database, Globe, Upload, Download, Folder, FolderOpen, Copy, Check } from 'lucide-react';
+import { Plus, Book, Trash2, FileText, Layout, Settings, Cpu, MessageSquareQuote, ChevronDown, ChevronRight, Database, Globe, Upload, Download, Folder, FolderOpen, Copy, Check, Play, Loader2 } from 'lucide-react';
 import { NovelSettings, Chapter } from '../types';
 
 interface SavedNovel {
@@ -26,6 +26,7 @@ interface AppSidebarProps {
   chapters?: Chapter[];
   currentChapterId?: number | null;
   onChapterSelect?: (id: number) => void;
+  onAutoGenerate?: () => void;
 }
 
 interface VolumeGroup {
@@ -37,12 +38,19 @@ interface VolumeGroup {
 const AppSidebar: React.FC<AppSidebarProps> = ({ 
     novels, currentNovelId, onSelect, onCreate, onDelete, 
     settings, onSettingsChange, currentView, onNavigate, onImport, onExport,
-    chapters = [], currentChapterId, onChapterSelect
+    chapters = [], currentChapterId, onChapterSelect, onAutoGenerate
 }) => {
   const [isLibraryExpanded, setIsLibraryExpanded] = useState(true);
   const [isSettingsExpanded, setIsSettingsExpanded] = useState(false);
   const [expandedVolumes, setExpandedVolumes] = useState<Record<number, boolean>>({});
   const [copiedSummaryId, setCopiedSummaryId] = useState<number | null>(null);
+
+  // Calculate stats
+  const totalWordCount = useMemo(() => {
+      return chapters.reduce((acc, c) => acc + (c.wordCount || 0), 0);
+  }, [chapters]);
+
+  const isGeneratingAny = chapters.some(c => c.isGenerating);
 
   // Auto-expand library if not open, to show the active book
   useEffect(() => {
@@ -53,6 +61,12 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
 
   const formatDate = (date: Date) => {
     return new Intl.DateTimeFormat('zh-CN', { month: 'short', day: 'numeric' }).format(date);
+  };
+
+  const formatWordCount = (count: number) => {
+      if (count >= 10000) return (count / 10000).toFixed(1) + 'w';
+      if (count >= 1000) return (count / 1000).toFixed(1) + 'k';
+      return count.toString();
   };
 
   const handleDeleteClick = (e: React.MouseEvent, id: string) => {
@@ -118,6 +132,25 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
 
   const renderChapterList = () => (
       <div className="mt-1 ml-3 pl-2 border-l border-gray-700 animate-in slide-in-from-top-1">
+        
+        {/* Batch Action Header */}
+        <div className="flex justify-between items-center px-2 py-1 mb-1">
+            <span className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">
+                共 {chapters.length} 章 · {formatWordCount(totalWordCount)} 字
+            </span>
+            {onAutoGenerate && (
+                <button 
+                    onClick={(e) => { e.stopPropagation(); onAutoGenerate(); }}
+                    disabled={isGeneratingAny}
+                    className={`flex items-center gap-1 text-[10px] px-2 py-0.5 rounded bg-indigo-900/50 hover:bg-indigo-900 text-indigo-300 hover:text-white transition-colors border border-indigo-800 ${isGeneratingAny ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    title="自动生成所有未完成章节"
+                >
+                    {isGeneratingAny ? <Loader2 size={10} className="animate-spin"/> : <Play size={10}/>}
+                    一键生成
+                </button>
+            )}
+        </div>
+
         {volumeGroups.map(group => (
             <div key={group.volumeId} className="mb-1">
                 {volumeGroups.length > 1 && (
@@ -139,27 +172,37 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
                                     e.stopPropagation();
                                     onChapterSelect && onChapterSelect(chapter.id);
                                 }}
-                                className={`group px-3 py-1.5 rounded-md text-xs cursor-pointer truncate transition-colors flex items-center gap-2 relative pr-7 ${
+                                className={`group px-3 py-1.5 rounded-md text-xs cursor-pointer truncate transition-colors flex items-center justify-between relative pr-7 ${
                                     currentChapterId === chapter.id 
                                     ? 'bg-indigo-900/30 text-indigo-200 font-medium' 
                                     : 'text-gray-400 hover:bg-gray-800/50 hover:text-gray-200'
                                 }`}
                                 title={chapter.title}
                             >
-                                <span className="opacity-50 w-4 text-right shrink-0">{chapter.id}.</span>
-                                <span className="truncate flex-1">{chapter.title}</span>
+                                <div className="flex items-center gap-2 truncate">
+                                    <span className="opacity-50 w-4 text-right shrink-0">{chapter.id}.</span>
+                                    <span className="truncate">{chapter.title}</span>
+                                </div>
                                 
-                                {chapter.summary && (
-                                    <button
-                                        onClick={(e) => handleCopySummary(e, chapter)}
-                                        className={`absolute right-1 p-1 rounded transition-all hover:bg-gray-700 hover:text-white ${
-                                            copiedSummaryId === chapter.id ? 'opacity-100 text-green-400' : 'opacity-0 group-hover:opacity-100 text-gray-500'
-                                        }`}
-                                        title="复制摘要"
-                                    >
-                                        {copiedSummaryId === chapter.id ? <Check size={10} /> : <Copy size={10} />}
-                                    </button>
-                                )}
+                                <div className="flex items-center">
+                                    {chapter.wordCount ? (
+                                        <span className="text-[9px] opacity-40 font-mono mr-1">
+                                            {formatWordCount(chapter.wordCount)}
+                                        </span>
+                                    ) : null}
+                                    
+                                    {chapter.summary && (
+                                        <button
+                                            onClick={(e) => handleCopySummary(e, chapter)}
+                                            className={`absolute right-1 p-1 rounded transition-all hover:bg-gray-700 hover:text-white ${
+                                                copiedSummaryId === chapter.id ? 'opacity-100 text-green-400' : 'opacity-0 group-hover:opacity-100 text-gray-500'
+                                            }`}
+                                            title="复制摘要"
+                                        >
+                                            {copiedSummaryId === chapter.id ? <Check size={10} /> : <Copy size={10} />}
+                                        </button>
+                                    )}
+                                </div>
                             </div>
                         ))}
                     </div>
@@ -364,8 +407,8 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
       
       {/* Footer Info */}
       <div className="p-4 border-t border-gray-800 text-[10px] text-gray-600 text-center flex justify-between items-center">
-         <span>v1.5.4</span>
-         <span className="flex items-center gap-1 opacity-50">Fix Navigation</span>
+         <span>v1.6.0</span>
+         <span className="flex items-center gap-1 opacity-50">Word Count Added</span>
       </div>
     </div>
   );

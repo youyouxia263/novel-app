@@ -229,6 +229,7 @@ export interface NovelState {
   currentChapterId: number | null;
   status: 'idle' | 'generating_outline' | 'ready';
   consistencyReport?: string | null;
+  globalConsistencyReport?: string | null; // New Field
   usage: UsageStats; 
   lastSaved?: Date; // Track save time
 }

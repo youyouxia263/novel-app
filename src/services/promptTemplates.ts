@@ -26,6 +26,7 @@ export const PROMPT_KEYS = {
     ANALYZE_IMPORTED: 'analyze_imported',
     CHECK_PLOT_LOGIC: 'check_plot_logic',
     GENERATE_CHARACTER_IMAGE: 'generate_character_image',
+    ANALYZE_NOVEL_COHERENCE: 'analyze_novel_coherence',
 };
 
 export const DEFAULT_PROMPTS: Record<string, string> = {
@@ -110,6 +111,39 @@ Output Format (Markdown):
 ### 4. Rating
 - **Cohesiveness**: X/10
 - **Excitement**: X/10`,
+
+    [PROMPT_KEYS.ANALYZE_NOVEL_COHERENCE]: `Role: Senior Continuity Editor.
+Task: Analyze the entire novel sequence for coherence, continuity errors, and flow.
+
+Novel Title: {{title}}
+Context: {{premise}}
+
+Character Profiles:
+{{characters}}
+
+Chapter Sequence:
+{{sequence}}
+
+Analysis Requirements:
+1. **Plot Holes**: Identify logical gaps between chapters (e.g., Chapter 5 ends in a forest, Chapter 6 starts in a city with no travel explanation).
+2. **Character Consistency**: Check if character motivations, skills, or personality traits suddenly change without development.
+3. **Volume Transitions**: Evaluate if the transition between volumes (if any) is smooth and logical.
+4. **Timeline Logic**: Are events occurring in a plausible chronological order?
+
+Output Format (Markdown):
+## Global Coherence Report
+
+### 🔴 Critical Issues (Must Fix)
+- **[Chapter X -> Y]**: Description of the discontinuity or plot hole.
+
+### 🟡 Minor Inconsistencies
+- **[Character/Plot]**: Description of slight logical drift.
+
+### 🟢 Volume Transitions
+- Analysis of how well the story flows between major arcs.
+
+### 💡 Suggestions for Revision
+- Concrete advice to smooth out the narrative.`,
 };
 
 export const getPromptTemplate = (key: string, settings: NovelSettings): string => {

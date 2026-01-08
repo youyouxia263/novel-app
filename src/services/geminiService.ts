@@ -30,7 +30,7 @@ export const sanitizeCharacter = (char: any): Character => {
     };
 };
 
-// ... (keep basic generators: generateTitles, generatePremise, expandText, generateWorldSetting, generateCharacterConcepts)
+// ... (keep basic generators)
 
 export const generateTitles = async (settings: NovelSettings): Promise<string[]> => {
     const ai = getClient(settings);
@@ -123,7 +123,7 @@ export const generateCharacterConcepts = async (settings: NovelSettings): Promis
     return response.text || '';
 };
 
-// --- Structured Generation ---
+// ... (keep generateOutline)
 
 export const generateOutline = async (
     settings: NovelSettings, 
@@ -139,13 +139,11 @@ export const generateOutline = async (
         mainCharacters: settings.mainCharacters || ''
     });
 
-    // Use Flash for outlines - usually more stable for structured JSON lists than Pro in some cases
-    // and avoids the "infinite number loop" issue seen with Pro sometimes.
     const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview', 
         contents: prompt,
         config: {
-            temperature: 0.7, // Reduce randomness slightly to prevent loops
+            temperature: 0.7, 
             responseMimeType: 'application/json',
             responseSchema: {
                 type: Type.ARRAY,
@@ -172,7 +170,6 @@ export const generateOutline = async (
 
     try {
         let cleanText = response.text || "[]";
-        // 1. Remove Markdown
         cleanText = cleanText.replace(/```json\n?|```/g, '').trim();
         
         let json;
@@ -180,27 +177,19 @@ export const generateOutline = async (
             json = JSON.parse(cleanText);
         } catch (parseError) {
             console.warn("JSON parse failed, attempting partial recovery", parseError);
-            
-            // 3. Fallback: Extract valid JSON objects using Regex
-            // This regex finds balanced { ... } blocks.
             const matches = cleanText.match(/\{(?:[^{}]|\{(?:[^{}]|)*\})*\}/g);
             
             if (matches && matches.length > 0) {
                 json = matches.map(m => {
-                    try { 
-                        return JSON.parse(m); 
-                    } catch { 
-                        return null; 
-                    }
-                }).filter(x => x !== null && x.title && x.id); // Ensure minimal valid structure
+                    try { return JSON.parse(m); } catch { return null; }
+                }).filter(x => x !== null && x.title && x.id); 
             } else {
-                // 4. Last ditch: Try closing the array if it was just truncated at the end
                 if (cleanText.startsWith('[') && !cleanText.endsWith(']')) {
                     try {
                         const fixed = cleanText.replace(/,\s*$/, '') + ']';
                         json = JSON.parse(fixed);
                     } catch {
-                        throw parseError; // Give up
+                        throw parseError; 
                     }
                 } else {
                     throw parseError;
@@ -212,7 +201,6 @@ export const generateOutline = async (
              if (typeof json === 'object' && json !== null && (json as any).chapters && Array.isArray((json as any).chapters)) {
                  json = (json as any).chapters;
              } else {
-                 // Single object? Wrap it
                  if (json && (json as any).title) {
                      json = [json];
                  } else {
@@ -221,7 +209,6 @@ export const generateOutline = async (
              }
         }
 
-        // Post-processing: Assign volumes if missing for long novels
         const processedChapters = json.map((c: any) => {
             const sanitized = {
                 ...c,
@@ -229,14 +216,12 @@ export const generateOutline = async (
                 wordCount: 0,
                 isGenerating: false,
                 isDone: false,
-                // Ensure volumeId is reasonable
                 volumeId: (c.volumeId && c.volumeId < 100) ? c.volumeId : 1,
                 volumeTitle: c.volumeTitle || (c.volumeId ? `Volume ${c.volumeId}` : 'Default')
             };
             return sanitized;
         });
 
-        // Fallback: If settings asks for many chapters but no volumes returned, manually group them
         if (settings.chapterCount > 40 && processedChapters.length > 0 && processedChapters.every((c: Chapter) => !c.volumeId || c.volumeId === 1)) {
             const CHAPTERS_PER_VOLUME = 20;
             processedChapters.forEach((c: Chapter, index: number) => {
@@ -254,7 +239,8 @@ export const generateOutline = async (
     }
 };
 
-// ... (rest of the file remains unchanged)
+// ... (keep generateCharacters)
+
 export const generateCharacters = async (
     settings: NovelSettings,
     signal?: AbortSignal,
@@ -318,7 +304,6 @@ export async function* generateChapterStream(
     const ai = getClient(settings);
     const template = getPromptTemplate(PROMPT_KEYS.GENERATE_CHAPTER, settings);
     
-    // Construct char context
     const charContext = characters.map(c => `${c.name} (${c.role}): ${c.description}`).join('\n');
 
     const prompt = fillPrompt(template, {
@@ -334,7 +319,7 @@ export async function* generateChapterStream(
     });
 
     const streamResult = await ai.models.generateContentStream({
-        model: 'gemini-3-pro-preview', // High quality for writing
+        model: 'gemini-3-pro-preview', 
         contents: prompt,
     });
 
@@ -343,6 +328,8 @@ export async function* generateChapterStream(
         yield chunk.text || '';
     }
 }
+
+// ... (keep extendChapter, continueWriting, summarizeChapter, checkGrammar, autoCorrectGrammar, analyzePacing)
 
 export async function* extendChapter(
     currentContent: string,
@@ -383,7 +370,7 @@ export async function* continueWriting(
     Maintain the style: ${settings.writingStyle}, Tone: ${settings.writingTone}.`;
 
     const streamResult = await ai.models.generateContentStream({
-        model: 'gemini-3-flash-preview', // Faster for interactive continue
+        model: 'gemini-3-flash-preview', 
         contents: prompt,
     });
 
@@ -417,7 +404,7 @@ export const checkGrammar = async (text: string, settings: NovelSettings): Promi
     const ai = getClient(settings);
     const prompt = `Check the following text for grammar and spelling errors. 
     Return a JSON array of objects with { original, suggestion, explanation }.
-    Text: ${text.slice(0, 5000)}`; // Limit context
+    Text: ${text.slice(0, 5000)}`; 
     
     const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
@@ -474,6 +461,8 @@ export const analyzeImportedNovel = async (text: string, settings: NovelSettings
         return { characters: [] };
     }
 };
+
+// ... (keep generateSingleCharacter, generateCharacterImage, analyzeCharacterDepth, world gen functions, checkPlotLogic)
 
 export const generateSingleCharacter = async (settings: NovelSettings, existingChars: Character[]): Promise<Character> => {
     const ai = getClient(settings);
@@ -626,8 +615,42 @@ export const checkPlotLogic = async (plotData: PlotData, settings: NovelSettings
     });
     
     const response = await ai.models.generateContent({
-        model: 'gemini-3-pro-preview', // Reasoning needed
+        model: 'gemini-3-pro-preview', 
         contents: prompt
     });
     return response.text || '';
+};
+
+export const analyzeNovelCoherence = async (
+    chapters: Chapter[], 
+    characters: Character[], 
+    settings: NovelSettings
+): Promise<string> => {
+    const ai = getClient(settings);
+    const template = getPromptTemplate(PROMPT_KEYS.ANALYZE_NOVEL_COHERENCE, settings);
+
+    // Build Character Context
+    const charList = characters.map(c => `- ${c.name} (${c.role}): ${c.description}, Relationships: ${c.relationships}`).join('\n');
+
+    // Build Chapter Sequence
+    const sequence = chapters.map(c => `
+    [Chapter ${c.id}] (Volume: ${c.volumeTitle || '1'})
+    Title: ${c.title}
+    Summary: ${c.summary || 'Content not generated yet'}
+    ${c.content ? `Snippet: ${c.content.slice(0, 200)}...` : ''}
+    `).join('\n');
+
+    const prompt = fillPrompt(template, {
+        title: settings.title,
+        premise: settings.premise,
+        characters: charList,
+        sequence: sequence
+    });
+
+    const response = await ai.models.generateContent({
+        model: 'gemini-3-pro-preview', // Requires complex reasoning
+        contents: prompt
+    });
+
+    return response.text || 'Analysis failed.';
 };

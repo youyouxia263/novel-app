@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { AppearanceSettings, Chapter, NovelSettings, GrammarIssue, Character } from '../types';
-import { Type, AlignLeft, AlignJustify, Moon, Sun, Monitor, ArrowUpDown, Home, ChevronRight, Edit3, Save, X, Sparkles, Loader2, AlertTriangle, FileText, BookOpen, Copy, Check, SpellCheck, PenLine, FileCode, RefreshCw, Square, Activity, ArrowLeft, List, Folder, FolderOpen } from 'lucide-react';
+import { Type, AlignLeft, AlignJustify, Moon, Sun, Monitor, ArrowUpDown, Home, ChevronRight, Edit3, Save, X, Sparkles, Loader2, AlertTriangle, FileText, BookOpen, Copy, Check, SpellCheck, PenLine, FileCode, RefreshCw, Square, Activity, ArrowLeft, List, Folder, FolderOpen, Target } from 'lucide-react';
 import { continueWriting, checkGrammar, autoCorrectGrammar, analyzePacing } from '../services/geminiService';
 import GrammarReport from './GrammarReport';
 
@@ -14,6 +14,7 @@ interface ReaderProps {
   onRewrite: () => void;
   onBack: () => void;
   onUpdateContent: (id: number, content: string) => void;
+  onUpdateChapter?: (id: number, data: Partial<Chapter>) => void;
   characters?: Character[];
   onStop?: () => void;
   chapters?: Chapter[];
@@ -35,6 +36,7 @@ const Reader: React.FC<ReaderProps> = ({
   onRewrite,
   onBack,
   onUpdateContent,
+  onUpdateChapter,
   characters = [],
   onStop,
   chapters = [],
@@ -62,6 +64,9 @@ const Reader: React.FC<ReaderProps> = ({
   const [isDirectoryOpen, setIsDirectoryOpen] = useState(false);
   const [expandedVolumes, setExpandedVolumes] = useState<Record<number, boolean>>({});
   const directoryScrollRef = useRef<HTMLDivElement>(null);
+
+  // Target Word Count Popover
+  const [showTargetInput, setShowTargetInput] = useState(false);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const contentEndRef = useRef<HTMLDivElement>(null);
@@ -272,6 +277,11 @@ const Reader: React.FC<ReaderProps> = ({
       }
   };
 
+  const handleTargetChange = (val: number) => {
+      if (!chapter || !onUpdateChapter) return;
+      onUpdateChapter(chapter.id, { targetWordCount: val });
+  };
+
   const getWordCount = (text: string) => {
     if (!text) return 0;
     const nonAscii = (text.match(/[^\x00-\x7F]/g) || []).length;
@@ -282,7 +292,9 @@ const Reader: React.FC<ReaderProps> = ({
   };
 
   const getThemeClasses = () => {
-    switch (appearance.theme) {
+    // Safety check in case appearance is undefined
+    const theme = appearance?.theme || 'light';
+    switch (theme) {
       case 'dark': return 'bg-gray-900 text-gray-300';
       case 'sepia': return 'bg-[#f4ecd8] text-[#5b4636]';
       default: return 'bg-white text-gray-800'; // light
@@ -290,12 +302,21 @@ const Reader: React.FC<ReaderProps> = ({
   };
 
   const getContainerThemeClasses = () => {
-    switch (appearance.theme) {
+    const theme = appearance?.theme || 'light';
+    switch (theme) {
       case 'dark': return 'bg-gray-950 border-gray-800';
       case 'sepia': return 'bg-[#eaddcf] border-[#d3c4b1]';
       default: return 'bg-gray-100 border-gray-200'; // light
     }
   }
+
+  const safeAppearance = appearance || {
+      fontFamily: 'font-serif',
+      fontSize: 'text-base',
+      lineHeight: 'leading-loose',
+      textAlign: 'text-left',
+      theme: 'light'
+  };
 
   if (!chapter) {
     return (
@@ -310,9 +331,7 @@ const Reader: React.FC<ReaderProps> = ({
 
   const currentText = isEditing ? editContent : (chapter.content || '');
   const displayWordCount = getWordCount(currentText + streamingContent);
-  const targetWords = settings.targetWordCount && settings.novelType === 'short' 
-      ? settings.targetWordCount 
-      : 4000;
+  const targetWords = chapter.targetWordCount || settings.targetChapterWordCount || 3000;
   const progressPercent = Math.min(100, Math.round((displayWordCount / targetWords) * 100));
   const isBusy = isAiWriting || chapter.isGenerating;
 
@@ -358,8 +377,8 @@ const Reader: React.FC<ReaderProps> = ({
 
       {/* Toolbar */}
       <div className={`h-14 flex items-center justify-between px-4 md:px-6 border-b shrink-0 transition-colors duration-300 ${
-        appearance.theme === 'dark' ? 'bg-gray-900 border-gray-800' : 
-        appearance.theme === 'sepia' ? 'bg-[#f4ecd8] border-[#d3c4b1]' : 
+        safeAppearance.theme === 'dark' ? 'bg-gray-900 border-gray-800' : 
+        safeAppearance.theme === 'sepia' ? 'bg-[#f4ecd8] border-[#d3c4b1]' : 
         'bg-white border-gray-200'
       }`}>
         <div className="flex items-center overflow-hidden mr-4">
@@ -367,7 +386,7 @@ const Reader: React.FC<ReaderProps> = ({
            <button 
               onClick={onBack}
               className={`flex items-center space-x-1 hover:bg-black/5 px-2 py-1.5 rounded-lg transition-colors group mr-1 ${
-                appearance.theme === 'light' ? 'text-gray-600 hover:text-indigo-600' : 'text-gray-400 hover:text-white'
+                safeAppearance.theme === 'light' ? 'text-gray-600 hover:text-indigo-600' : 'text-gray-400 hover:text-white'
               }`}
               title="返回书架"
            >
@@ -378,7 +397,7 @@ const Reader: React.FC<ReaderProps> = ({
            <button 
               onClick={() => setIsDirectoryOpen(true)}
               className={`flex items-center space-x-1 hover:bg-black/5 px-2 py-1.5 rounded-lg transition-colors group mr-2 ${
-                appearance.theme === 'light' ? 'text-gray-600 hover:text-indigo-600' : 'text-gray-400 hover:text-white'
+                safeAppearance.theme === 'light' ? 'text-gray-600 hover:text-indigo-600' : 'text-gray-400 hover:text-white'
               }`}
               title="打开目录"
            >
@@ -402,31 +421,51 @@ const Reader: React.FC<ReaderProps> = ({
         <div className="flex items-center space-x-2">
             {!isEditing ? (
                 <>
-                <select 
-                value={appearance.fontFamily}
-                onChange={(e) => onAppearanceChange({ fontFamily: e.target.value as any })}
-                className={`hidden md:block text-xs p-1 rounded border-none bg-transparent focus:ring-0 cursor-pointer opacity-70 hover:opacity-100`}
-                >
-                <option value="font-serif">宋体/Serif</option>
-                <option value="font-sans">黑体/Sans</option>
-                <option value="font-lora">Lora</option>
-                </select>
-
                 <div className="hidden lg:flex items-center border-l border-r border-opacity-20 px-2 space-x-1 border-current">
-                <button onClick={() => onAppearanceChange({ fontSize: 'text-sm' })} className={`p-1 hover:bg-black/5 rounded ${appearance.fontSize === 'text-sm' ? 'font-bold' : ''}`}>A</button>
-                <button onClick={() => onAppearanceChange({ fontSize: 'text-base' })} className={`p-1 hover:bg-black/5 rounded text-lg ${appearance.fontSize === 'text-base' ? 'font-bold' : ''}`}>A</button>
-                <button onClick={() => onAppearanceChange({ fontSize: 'text-lg' })} className={`p-1 hover:bg-black/5 rounded text-xl ${appearance.fontSize === 'text-lg' ? 'font-bold' : ''}`}>A</button>
+                   <button onClick={() => onAppearanceChange({ fontSize: 'text-sm' })} className={`p-1 hover:bg-black/5 rounded ${safeAppearance.fontSize === 'text-sm' ? 'font-bold' : ''}`}>A</button>
+                   <button onClick={() => onAppearanceChange({ fontSize: 'text-base' })} className={`p-1 hover:bg-black/5 rounded text-lg ${safeAppearance.fontSize === 'text-base' ? 'font-bold' : ''}`}>A</button>
+                   <button onClick={() => onAppearanceChange({ fontSize: 'text-lg' })} className={`p-1 hover:bg-black/5 rounded text-xl ${safeAppearance.fontSize === 'text-lg' ? 'font-bold' : ''}`}>A</button>
                 </div>
 
                 <div className="hidden lg:flex items-center space-x-1 px-2">
-                <button onClick={() => onAppearanceChange({ textAlign: 'text-left' })} className={`p-1 rounded hover:bg-black/5 ${appearance.textAlign === 'text-left' ? 'bg-black/10' : ''}`}><AlignLeft size={16}/></button>
-                <button onClick={() => onAppearanceChange({ textAlign: 'text-justify' })} className={`p-1 rounded hover:bg-black/5 ${appearance.textAlign === 'text-justify' ? 'bg-black/10' : ''}`}><AlignJustify size={16}/></button>
+                   <button onClick={() => onAppearanceChange({ textAlign: 'text-left' })} className={`p-1 rounded hover:bg-black/5 ${safeAppearance.textAlign === 'text-left' ? 'bg-black/10' : ''}`}><AlignLeft size={16}/></button>
+                   <button onClick={() => onAppearanceChange({ textAlign: 'text-justify' })} className={`p-1 rounded hover:bg-black/5 ${safeAppearance.textAlign === 'text-justify' ? 'bg-black/10' : ''}`}><AlignJustify size={16}/></button>
                 </div>
 
                 <div className="flex items-center bg-black/5 rounded-lg p-0.5 ml-2">
-                <button onClick={() => onAppearanceChange({ theme: 'light' })} className={`p-1.5 rounded-md ${appearance.theme === 'light' ? 'bg-white shadow-sm text-yellow-600' : 'text-gray-400'}`}><Sun size={14} /></button>
-                <button onClick={() => onAppearanceChange({ theme: 'sepia' })} className={`p-1.5 rounded-md ${appearance.theme === 'sepia' ? 'bg-[#eaddcf] shadow-sm text-[#5b4636]' : 'text-gray-400'}`}><Monitor size={14} /></button>
-                <button onClick={() => onAppearanceChange({ theme: 'dark' })} className={`p-1.5 rounded-md ${appearance.theme === 'dark' ? 'bg-gray-800 shadow-sm text-indigo-400' : 'text-gray-400'}`}><Moon size={14} /></button>
+                   <button onClick={() => onAppearanceChange({ theme: 'light' })} className={`p-1.5 rounded-md ${safeAppearance.theme === 'light' ? 'bg-white shadow-sm text-yellow-600' : 'text-gray-400'}`}><Sun size={14} /></button>
+                   <button onClick={() => onAppearanceChange({ theme: 'sepia' })} className={`p-1.5 rounded-md ${safeAppearance.theme === 'sepia' ? 'bg-[#eaddcf] shadow-sm text-[#5b4636]' : 'text-gray-400'}`}><Monitor size={14} /></button>
+                   <button onClick={() => onAppearanceChange({ theme: 'dark' })} className={`p-1.5 rounded-md ${safeAppearance.theme === 'dark' ? 'bg-gray-800 shadow-sm text-indigo-400' : 'text-gray-400'}`}><Moon size={14} /></button>
+                </div>
+                
+                {/* Target Word Count Control - Toolbar */}
+                <div className="relative ml-2">
+                    <button 
+                        onClick={() => setShowTargetInput(!showTargetInput)}
+                        className={`p-1.5 rounded-md hover:bg-black/5 transition-colors text-gray-500 hover:text-indigo-600 flex items-center gap-1`}
+                        title={`本章目标字数: ${chapter.targetWordCount || settings.targetChapterWordCount || 3000}`}
+                    >
+                        <Target size={16} />
+                        <span className="text-xs font-mono hidden xl:inline">{chapter.targetWordCount || settings.targetChapterWordCount || 3000}</span>
+                    </button>
+                    
+                    {showTargetInput && (
+                        <div className="absolute top-full right-0 mt-2 p-3 bg-white rounded-lg shadow-xl border border-gray-200 z-50 w-48 animate-in fade-in zoom-in-95">
+                            <label className="block text-xs font-bold text-gray-700 mb-2">本章目标字数</label>
+                            <div className="flex gap-2">
+                                <input 
+                                    type="number" 
+                                    min="100" 
+                                    step="100"
+                                    autoFocus
+                                    className="w-full px-2 py-1 text-sm border rounded"
+                                    value={chapter.targetWordCount || settings.targetChapterWordCount || 3000}
+                                    onChange={(e) => handleTargetChange(parseInt(e.target.value))}
+                                />
+                                <button onClick={() => setShowTargetInput(false)} className="px-2 py-1 bg-gray-100 rounded hover:bg-gray-200 text-xs">OK</button>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {(chapter.content || isBusy) && (
@@ -511,12 +550,12 @@ const Reader: React.FC<ReaderProps> = ({
              ref={textareaRef}
              value={editContent}
              onChange={(e) => setEditContent(e.target.value)}
-             className={`absolute inset-0 w-full h-full p-8 resize-none outline-none leading-loose ${getThemeClasses()} ${appearance.fontFamily} ${appearance.fontSize}`}
+             className={`absolute inset-0 w-full h-full p-8 resize-none outline-none leading-loose ${getThemeClasses()} ${safeAppearance.fontFamily} ${safeAppearance.fontSize}`}
              placeholder="开始写作..."
            />
         ) : (
            <div 
-             className={`absolute inset-0 w-full h-full overflow-y-auto p-8 prose max-w-none ${getThemeClasses()} ${appearance.fontFamily} ${appearance.fontSize} ${appearance.textAlign} ${appearance.lineHeight}`}
+             className={`absolute inset-0 w-full h-full overflow-y-auto p-8 prose max-w-none ${getThemeClasses()} ${safeAppearance.fontFamily} ${safeAppearance.fontSize} ${safeAppearance.textAlign} ${safeAppearance.lineHeight}`}
            >
              {chapter.content || chapter.isGenerating || streamingContent ? (
                 <div className="whitespace-pre-wrap max-w-3xl mx-auto pb-20">
@@ -525,7 +564,7 @@ const Reader: React.FC<ReaderProps> = ({
                    
                    {streamingContent && (
                         <span className={`inline relative font-serif px-1 py-0.5 rounded mx-0.5 ${
-                            appearance.theme === 'dark' ? 'text-indigo-200 bg-indigo-900/40' : 'text-indigo-800 bg-indigo-50'
+                            safeAppearance.theme === 'dark' ? 'text-indigo-200 bg-indigo-900/40' : 'text-indigo-800 bg-indigo-50'
                         } transition-colors duration-200`}>
                             {streamingContent}
                             <span className="inline-block w-2 h-5 ml-1 align-middle bg-indigo-500 animate-pulse rounded-sm"></span>
@@ -546,16 +585,36 @@ const Reader: React.FC<ReaderProps> = ({
                    <div ref={contentEndRef} />
                 </div>
              ) : (
-                <div className="h-full flex flex-col items-center justify-center text-gray-400 space-y-4">
-                   <div className="p-4 rounded-full bg-gray-100/50">
-                      <Sparkles size={32} className="opacity-50" />
+                <div className="h-full flex flex-col items-center justify-center text-gray-400 space-y-6">
+                   <div className="p-6 rounded-full bg-gray-100/50">
+                      <Sparkles size={48} className="opacity-40" />
                    </div>
-                   <p>本章暂无内容</p>
+                   <div className="text-center">
+                       <h3 className="text-lg font-bold text-gray-600 mb-1">本章暂无内容</h3>
+                       <p className="text-sm opacity-70">配置生成参数并开始创作</p>
+                   </div>
+                   
+                   {/* Target Word Count Setting - Empty State */}
+                   <div className="bg-gray-50 border border-gray-200 p-3 rounded-lg flex items-center gap-3">
+                       <Target size={18} className="text-indigo-500"/>
+                       <span className="text-sm font-medium text-gray-600">目标字数:</span>
+                       <input 
+                           type="number"
+                           min="500"
+                           step="100"
+                           value={chapter.targetWordCount || settings.targetChapterWordCount || 3000}
+                           onChange={(e) => handleTargetChange(parseInt(e.target.value))}
+                           className="w-24 p-1.5 border border-gray-300 rounded text-center text-sm font-mono focus:ring-2 focus:ring-indigo-500 outline-none"
+                       />
+                       <span className="text-xs text-gray-400">字</span>
+                   </div>
+
                    <button 
                       onClick={onGenerate}
-                      className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                      className="px-6 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all shadow-lg hover:shadow-indigo-500/25 font-medium flex items-center gap-2"
                    >
-                      生成内容
+                      <Sparkles size={16} />
+                      <span>生成章节内容</span>
                    </button>
                 </div>
              )}

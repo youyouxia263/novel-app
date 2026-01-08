@@ -16,7 +16,7 @@ import ModelConfigManager from './components/ModelConfigManager';
 import PromptConfigManager from './components/PromptConfigManager';
 import StorageConfigManager from './components/StorageConfigManager';
 import LanguageConfigManager from './components/LanguageConfigManager';
-import { Menu, ChevronRight, CheckCircle2, Circle, Download, FileText, Printer, Sparkles, Users, FileSearch, BookOpen, Gauge, Database, Loader2, Clock, Layers, ChevronDown, StopCircle, Globe2, GitMerge, Save } from 'lucide-react';
+import { Users, Globe2, GitMerge, FileSearch, Save, Loader2 } from 'lucide-react';
 
 const getBaseDefaultSettings = (): NovelSettings => ({
   title: '',
@@ -158,9 +158,6 @@ const getContextFromChapters = (chapters: Chapter[], currentId: number, maxChars
 };
 
 export const App: React.FC = () => {
-  const [currentView, setCurrentView] = useState<ViewType>('workspace');
-  const [resetKey, setResetKey] = useState(0);
-
   const [state, setState] = useState<NovelState>({
     settings: getBaseDefaultSettings(), 
     chapters: [],
@@ -168,8 +165,40 @@ export const App: React.FC = () => {
     currentChapterId: null,
     status: 'idle',
     consistencyReport: null,
+    globalConsistencyReport: null, // Initialized
     usage: { inputTokens: 0, outputTokens: 0 }
   });
+
+  const [appearance, setAppearance] = useState<AppearanceSettings>(() => {
+    try {
+        const saved = localStorage.getItem('novel_reader_appearance');
+        if (saved) {
+            return { ...DEFAULT_APPEARANCE, ...JSON.parse(saved) };
+        }
+    } catch (e) {
+        console.warn('Failed to load appearance settings:', e);
+    }
+    return DEFAULT_APPEARANCE;
+  });
+
+  const [sidebarOpen, setSidebarOpen] = useState(true); 
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const [showCharacterModal, setShowCharacterModal] = useState(false);
+  const [showWorldBuilder, setShowWorldBuilder] = useState(false);
+  const [showPlotPlanner, setShowPlotPlanner] = useState(false);
+  const [showImporter, setShowImporter] = useState(false);
+  const [showConsistencyReport, setShowConsistencyReport] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [lastAutoSaveTime, setLastAutoSaveTime] = useState<Date | null>(null);
+  
+  const [savedNovels, setSavedNovels] = useState<{id: string, title: string, updatedAt: Date}[]>([]);
+  const [currentView, setCurrentView] = useState<ViewType>('workspace');
+  const [resetKey, setResetKey] = useState(0);
+  const [expandedVolumes, setExpandedVolumes] = useState<Record<number, boolean>>({});
+
+  const settingsRef = useRef(state.settings);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
      const init = async () => {
@@ -191,29 +220,14 @@ export const App: React.FC = () => {
      init();
   }, []);
 
-  const [appearance, setAppearance] = useState<AppearanceSettings>(DEFAULT_APPEARANCE);
-  const [sidebarOpen, setSidebarOpen] = useState(true); 
-  const [showExportMenu, setShowExportMenu] = useState(false);
-  const [showCharacterModal, setShowCharacterModal] = useState(false);
-  const [showWorldBuilder, setShowWorldBuilder] = useState(false);
-  const [showPlotPlanner, setShowPlotPlanner] = useState(false);
-  const [showImporter, setShowImporter] = useState(false);
-  const [showConsistencyReport, setShowConsistencyReport] = useState(false);
-  const [isCheckingConsistency, setIsCheckingConsistency] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [lastAutoSaveTime, setLastAutoSaveTime] = useState<Date | null>(null);
-  
-  const [savedNovels, setSavedNovels] = useState<{id: string, title: string, updatedAt: Date}[]>([]);
-  
-  const [expandedVolumes, setExpandedVolumes] = useState<Record<number, boolean>>({});
-
-  const settingsRef = useRef(state.settings);
-  const abortControllerRef = useRef<AbortController | null>(null);
-  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
   useEffect(() => {
     settingsRef.current = state.settings;
   }, [state.settings]);
+
+  // Save appearance whenever it changes
+  useEffect(() => {
+    localStorage.setItem('novel_reader_appearance', JSON.stringify(appearance));
+  }, [appearance]);
 
   const refreshLibrary = async () => {
       const dao = DAOFactory.getDAO(state.settings.storage.type === 'mysql' ? state.settings : getBaseDefaultSettings());
@@ -391,6 +405,13 @@ export const App: React.FC = () => {
     });
   };
 
+  const handleUpdateChapterData = (chapterId: number, data: Partial<Chapter>) => {
+    setState(prev => ({
+        ...prev,
+        chapters: prev.chapters.map(c => c.id === chapterId ? { ...c, ...data } : c)
+    }));
+  };
+
   const handleUpdateCharacters = (newCharacters: Character[]) => {
       setState(prev => ({ ...prev, characters: newCharacters }));
   };
@@ -421,6 +442,10 @@ Technology: ${newWorld.technology}
               plotData: newPlot
           }
       }));
+  };
+
+  const handleUpdateGlobalReport = (report: string) => {
+      setState(prev => ({ ...prev, globalConsistencyReport: report }));
   };
 
   const handleImport = (newSettings: NovelSettings, newChapters: Chapter[], newCharacters: Character[]) => {
@@ -843,6 +868,7 @@ Technology: ${newWorld.technology}
           chapters={state.chapters}
           currentChapterId={state.currentChapterId}
           onChapterSelect={selectChapter}
+          onAutoGenerate={handleAutoGenerate}
         />
       </div>
 
@@ -850,7 +876,7 @@ Technology: ${newWorld.technology}
         
         {currentView === 'workspace' && (
           <>
-            {state.status === 'idle' ? (
+            {state.status !== 'ready' ? (
               <div className="flex-1 overflow-y-auto p-4 md:p-8">
                  <SettingsForm 
                     settings={state.settings}
@@ -870,8 +896,11 @@ Technology: ${newWorld.technology}
                 onRewrite={() => generateChapterContent(true)}
                 onBack={() => setSidebarOpen(true)}
                 onUpdateContent={handleUpdateChapter}
+                onUpdateChapter={handleUpdateChapterData}
                 characters={state.characters}
                 onStop={handleStopGeneration}
+                chapters={state.chapters}
+                onChapterSelect={selectChapter}
               />
             )}
           </>
@@ -950,6 +979,10 @@ Technology: ${newWorld.technology}
         onClose={() => setShowConsistencyReport(false)}
         chapters={state.chapters}
         onFixConsistency={(id) => generateChapterContent(true)}
+        globalReport={state.globalConsistencyReport}
+        onUpdateGlobalReport={handleUpdateGlobalReport}
+        characters={state.characters}
+        settings={state.settings}
       />
 
       <Importer

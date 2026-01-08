@@ -17,27 +17,47 @@ interface SettingsFormProps {
 const MAIN_CATEGORIES = {
     male: [
         "玄幻", "奇幻", "武侠", "仙侠", "都市", "都市修真", "都市异能", 
-        "历史", "军事", "游戏", "体育", "科幻", "悬疑", "灵异", "现实", "轻小说"
+        "历史", "军事", "游戏", "体育", "科幻", "悬疑", "灵异", "现实", "轻小说",
+        "赛博朋克", "蒸汽朋克", "谍战特工", "衍生同人", "诸天无限", "末世危机", "悬疑惊悚", "历史谋略",
+        "战神赘婿", "脑洞星球", "鉴宝", "职场商战", "神医", "穿越重生", "系统", "即时战略"
     ],
     female: [
         "现代言情", "古代言情", "幻想言情", "仙侠奇缘", "青春校园", "职场", 
-        "豪门总裁", "婚恋", "宫斗宅斗", "种田", "快穿", "无限流", "悬疑推理", "现实情感"
+        "豪门总裁", "婚恋", "宫斗宅斗", "种田", "快穿", "无限流", "悬疑推理", "现实情感",
+        "年代文", "民国情缘", "玄学", "萌宝", "女强", "无CP", "衍生同人", "古言脑洞", "现言脑洞",
+        "兽世情缘", "空间种田", "异能异界", "极品亲戚", "逃荒", "清穿", "纯爱", "双男主"
     ]
 };
 
 const THEMES = [
+    // Core
     "重生", "穿越", "穿书", "快穿", "无限流", "系统", "签到", "末世", "国运", "规则怪谈", 
-    "直播", "娱乐圈", "商战", "校园", "职场", "西幻", "东方玄幻", "架空历史", "平行世界", "未来世界", "克苏鲁"
+    "直播", "娱乐圈", "商战", "校园", "职场", "西幻", "东方玄幻", "架空历史", "平行世界", "未来世界", "克苏鲁",
+    "灵气复苏", "御兽", "机甲", "模拟器", "聊天群", "诸天万界", "诡异复苏", "收容", "内卷", "躺平", "神医", "鉴宝", "荒岛求生", "赛博修仙", "空间", "异能",
+    // Niche & Trending
+    "变身", "替身", "多重人格", "时间循环", "第四天灾", "幕后黑手", "唯我独法", "废土", "领主种田", 
+    "四合院", "盗墓笔记", "赶海", "美食", "奶爸", "宠物", "医生", "老师", "警察", "卧底", "电竞",
+    "治愈", "致郁", "暗黑", "杀伐果断", "智商在线", "全球数据化", "全民转职", "反派洗白", "迪化", "多子多福", "长生不死", "苟道"
 ];
 
 const ROLES = [
+    // Identity & Perspective
     "男主视角", "女主视角", "群像", "单女主", "多女主", "双男主", "女强", "男强", "强强", 
-    "事业型主角", "团宠", "马甲", "萌宝", "师徒", "青梅竹马", "豪门世家", "黑莲花", "白月光", "反派主角"
+    "事业型主角", "团宠", "马甲", "萌宝", "师徒", "青梅竹马", "豪门世家", "黑莲花", "白月光", "反派主角",
+    "杀伐果断", "苟道(稳健)", "老六", "疯批", "病娇", "咸鱼", "龙傲天", "神探", "卧底", "女帝", "奶爸", "锦鲤", "戏精", "非人类",
+    // Detailed Archetypes
+    "赘婿", "战神", "神豪", "学霸", "明星", "导演", "主播", "UP主", "腹黑", "傲娇", "纯爱战神", "曹贼", "圣母", "偏执", "社恐", "社牛", 
+    "欢喜冤家", "合约夫妻", "养成", "替身", "万人迷", "钓系", "直男/直女", "海王", "绿茶", "白莲花"
 ];
 
 const PLOTS = [
+    // Tone & Structure
     "爽文", "甜宠", "热血", "轻松", "搞笑", "高燃", "高能", "慢热", "快节奏", 
-    "治愈", "致郁", "刀中带糖", "追妻火葬场", "先婚后爱", "破镜重圆", "扮猪吃虎", "无敌流", "升级流", "日常流"
+    "治愈", "致郁", "刀中带糖", "追妻火葬场", "先婚后爱", "破镜重圆", "扮猪吃虎", "无敌流", "升级流", "日常流",
+    "打脸", "复仇", "幕后流", "基建", "迪化(误会)", "救赎", "觉醒", "无限反转", "智斗", "经营", "养成", "群穿", "互换身体",
+    // Specific Plot Devices
+    "夺舍", "献祭", "逃亡", "宫斗", "宅斗", "争霸", "全球求生", "只有我能看见", "开局流放", "开局无敌", "满级新手", "九龙夺嫡", "真假千金", "带球跑",
+    "退婚流", "神豪流", "签到流", "直播流", "国运流", "凡人流", "无限流", "相爱相杀", "三生三世"
 ];
 
 const SettingsForm: React.FC<SettingsFormProps> = ({ settings, onSettingsChange, onSubmit, onStop, isLoading }) => {
@@ -311,17 +331,17 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ settings, onSettingsChange,
                             onClick={() => setCategoryTab('male')}
                             className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${categoryTab === 'male' ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:text-gray-700'}`}
                         >
-                            男频
+                            男频 (Male)
                         </button>
                         <button 
                             onClick={() => setCategoryTab('female')}
                             className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${categoryTab === 'female' ? 'bg-pink-100 text-pink-700' : 'text-gray-500 hover:text-gray-700'}`}
                         >
-                            女频
+                            女频 (Female)
                         </button>
                     </div>
                 </div>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto p-1">
                     {MAIN_CATEGORIES[categoryTab].map(cat => (
                         <button
                             key={cat}
@@ -346,7 +366,7 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ settings, onSettingsChange,
                         已选: {settings.themes.length}/3
                     </span>
                 </label>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto p-1 border rounded bg-white">
                     {THEMES.map(theme => (
                         <button
                             key={theme}
@@ -371,7 +391,7 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ settings, onSettingsChange,
                         已选: {settings.roles.length}/2
                     </span>
                 </label>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto p-1 border rounded bg-white">
                     {ROLES.map(role => (
                         <button
                             key={role}
@@ -396,7 +416,7 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ settings, onSettingsChange,
                         已选: {settings.plots.length}/3
                     </span>
                 </label>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto p-1 border rounded bg-white">
                     {PLOTS.map(plot => (
                         <button
                             key={plot}
