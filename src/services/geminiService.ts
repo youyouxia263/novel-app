@@ -1,10 +1,7 @@
 
-// ... existing imports
 import { GoogleGenAI, GenerateContentResponse, Type } from "@google/genai";
 import { NovelSettings, Chapter, Character, WorldData, PlotData, WorldLocation, WorldEvent, WorldTerm } from '../types';
 import { PROMPT_KEYS, getPromptTemplate, fillPrompt } from './promptTemplates';
-
-// ... (keep getClient and sanitizeCharacter)
 
 const getClient = (settings: NovelSettings) => {
     const key = settings.apiKey || process.env.API_KEY;
@@ -14,7 +11,7 @@ const getClient = (settings: NovelSettings) => {
 
 const getLanguageInstruction = (settings: NovelSettings) => {
     return settings.language === 'zh' 
-        ? 'You MUST write in Simplified Chinese (简体中文). Do not use English.' 
+        ? 'Simplified Chinese (简体中文). IMPORTANT: All output must be in Chinese. Do NOT use English.' 
         : 'English.';
 };
 
@@ -606,7 +603,7 @@ export const analyzeWorldConsistency = async (world: WorldData, settings: NovelS
     return response.text || '';
 };
 
-export const checkPlotLogic = async (plotData: PlotData, settings: NovelSettings): Promise<string> => {
+export const checkPlotLogic = async (plotData: PlotData, settings: NovelSettings, characters: Character[] = []): Promise<string> => {
     const ai = getClient(settings);
     const template = getPromptTemplate(PROMPT_KEYS.CHECK_PLOT_LOGIC, settings);
     
@@ -623,6 +620,10 @@ export const checkPlotLogic = async (plotData: PlotData, settings: NovelSettings
         `.trim();
     }).join('\n');
 
+    const charContext = characters.length > 0
+        ? characters.map(c => `* ${c.name} (${c.role})\n  - Goals: ${c.goals || 'Not defined'}\n  - Psychology: ${c.psychology || 'Not defined'}`).join('\n')
+        : 'No character profiles available.';
+
     const plan = `
     ### STRUCTURE
     Act 1: ${plotData.act1 || 'Not defined'}
@@ -635,6 +636,7 @@ export const checkPlotLogic = async (plotData: PlotData, settings: NovelSettings
     
     const prompt = fillPrompt(template, {
         plan: plan,
+        characters: charContext,
         languageInstruction: getLanguageInstruction(settings)
     });
     

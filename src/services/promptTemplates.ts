@@ -95,15 +95,21 @@ Context: {{premise}}
 Requirement: Add detail, depth, and clarity.`,
 
     [PROMPT_KEYS.CHECK_PLOT_LOGIC]: `Output Language: {{languageInstruction}}
-Task: Analyze the plot structure for logical consistency and provide concrete suggestions for improvement.
+Task: Analyze the plot structure for logical consistency and character motivation alignment.
+
+Character Profiles (Goals & Psychology):
+{{characters}}
 
 Plot Plan:
 {{plan}}
 
 Analysis Requirements:
 1. **Causality & Logic**: Do events follow a logical cause-and-effect chain? Are there contradictions or non-sequiturs?
-2. **Pacing & Tension**: Evaluate the distribution of tension. Is the climax properly built up? Are there dragging sections?
-3. **Character Motivation**: Do the events align with implied character goals?
+2. **Character Motivation Consistency**: 
+   - Do the key events align with the established goals and psychology of the characters involved?
+   - Are characters acting "out of character" just to force the plot forward?
+   - Identify specific nodes where a character's reaction seems forced or unmotivated.
+3. **Pacing & Tension**: Evaluate the distribution of tension. Is the climax properly built up? Are there dragging sections?
 4. **Loose Ends**: Are there unresolved setups or foreshadowing?
 
 Output Format (Markdown):
@@ -111,13 +117,14 @@ Output Format (Markdown):
 (Brief overview of the plot's health)
 
 ### 2. Identified Issues
-- **[Issue Type]**: Description of the problem.
+- **[Logic/Motivation/Pacing]**: Description of the problem.
 
 ### 3. Suggestions for Improvement
 - **[Suggestion]**: Concrete idea to fix an issue or enhance the story.
 
 ### 4. Rating
 - **Cohesiveness**: X/10
+- **Character Believability**: X/10
 - **Excitement**: X/10`,
 
     [PROMPT_KEYS.ANALYZE_NOVEL_COHERENCE]: `Output Language: {{languageInstruction}}

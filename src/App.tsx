@@ -165,7 +165,7 @@ export const App: React.FC = () => {
     currentChapterId: null,
     status: 'idle',
     consistencyReport: null,
-    globalConsistencyReport: null, // Initialized
+    globalConsistencyReport: null,
     usage: { inputTokens: 0, outputTokens: 0 }
   });
 
@@ -308,6 +308,13 @@ export const App: React.FC = () => {
       }
   };
 
+  const handleDeleteChapter = (chapterId: number) => {
+      setState(prev => ({
+          ...prev,
+          chapters: prev.chapters.filter(c => c.id !== chapterId)
+      }));
+  };
+
   const performSave = async (currentState: NovelState, isAuto: boolean = false) => {
       if (!currentState.settings.title) return; 
       if (!isAuto) setIsSaving(true);
@@ -334,6 +341,7 @@ export const App: React.FC = () => {
       if (autoSaveTimerRef.current) {
           clearTimeout(autoSaveTimerRef.current);
       }
+      // Auto-save debounce
       autoSaveTimerRef.current = setTimeout(() => {
           performSave(state, true);
       }, 3000);
@@ -448,7 +456,7 @@ Technology: ${newWorld.technology}
       setState(prev => ({ ...prev, globalConsistencyReport: report }));
   };
 
-  const handleImport = (newSettings: NovelSettings, newChapters: Chapter[], newCharacters: Character[]) => {
+  const handleImport = async (newSettings: NovelSettings, newChapters: Chapter[], newCharacters: Character[]) => {
       const newState: NovelState = {
           ...state,
           settings: { ...state.settings, ...newSettings },
@@ -459,11 +467,21 @@ Technology: ${newWorld.technology}
           usage: state.usage
       };
       
-      setState(newState);
-      setExpandedVolumes({1: true}); 
-      
-      // Immediately save the NEW state to avoid race condition with the auto-save useEffect
-      performSave(newState, true);
+      // Save immediately to generate an ID and avoid race conditions with auto-save
+      try {
+          const dao = DAOFactory.getDAO(newState.settings);
+          const id = await dao.saveNovel(newState);
+          newState.settings.id = id;
+          
+          setState(newState);
+          setExpandedVolumes({1: true}); 
+          setLastAutoSaveTime(new Date());
+          await refreshLibrary();
+      } catch (e) {
+          console.error("Import save failed", e);
+          // Fallback if save fails
+          setState(newState);
+      }
   };
 
   const generateOutlineAndCharacters = async () => {
@@ -493,6 +511,7 @@ Technology: ${newWorld.technology}
       groups.forEach(g => initialExpanded[g.volumeId] = true);
       setExpandedVolumes(initialExpanded);
 
+      // We rely on useEffect for auto-save here to avoid stale state issues
       setState(prev => ({
         ...prev,
         chapters: newChapters,
@@ -501,8 +520,6 @@ Technology: ${newWorld.technology}
         currentChapterId: newChapters[0]?.id || null
       }));
       
-      setTimeout(() => performSave(state, true), 1000);
-
     } catch (error: any) {
       if (error.name === 'AbortError' || error.message?.includes('Aborted')) {
           console.log("Generation stopped by user.");
@@ -652,7 +669,7 @@ Technology: ${newWorld.technology}
         }
         return { ...prev, chapters: nextChapters };
       });
-      setTimeout(() => performSave(state, true), 100);
+      // Removed manual performSave to rely on useEffect and avoid race conditions
 
     } catch (error: any) {
       if (error.name === 'AbortError' || error.message?.includes('Aborted')) {
@@ -755,7 +772,7 @@ Technology: ${newWorld.technology}
                 cumulativeSummaries += `\nChapter ${chapter.id}: ${summary}`;
                 previousChapterContent = (previousChapterContent + "\n\n" + fullContent).slice(-12000);
                 
-                await performSave(state, true);
+                // Rely on auto-save
                 success = true;
 
             } catch (error: any) {
@@ -869,6 +886,7 @@ Technology: ${newWorld.technology}
           currentChapterId={state.currentChapterId}
           onChapterSelect={selectChapter}
           onAutoGenerate={handleAutoGenerate}
+          onDeleteChapter={handleDeleteChapter}
         />
       </div>
 
@@ -972,6 +990,7 @@ Technology: ${newWorld.technology}
         onClose={() => setShowPlotPlanner(false)}
         settings={state.settings}
         onUpdatePlot={handleUpdatePlot}
+        characters={state.characters}
       />
 
       <ConsistencyReport 
